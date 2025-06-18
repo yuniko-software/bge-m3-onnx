@@ -1,2 +1,9 @@
-# Auto detect text files and perform LF normalization
 * text=auto
+*.{cmd,[cC][mM][dD]} text eol=crlf
+*.{bat,[bB][aA][tT]} text eol=crlf
+*.{ics,[iI][cC][sS]} text eol=crlf
+*.sh text eol=lf
+
+*.cs linguist-language=C#
+samples/dotnet/**/*.cs linguist-detectable=true
+samples/dotnet/**/*.cs linguist-documentation=false
