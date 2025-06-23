@@ -7,3 +7,7 @@
 *.cs linguist-language=C#
 samples/dotnet/**/*.cs linguist-detectable=true
 samples/dotnet/**/*.cs linguist-documentation=false
+
+*.java linguist-language=Java
+samples/java/**/*.java linguist-detectable=true
+samples/java/**/*.java linguist-documentation=false
