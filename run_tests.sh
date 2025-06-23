@@ -8,7 +8,7 @@ echo -e "${YELLOW}Starting BGE-M3 ONNX model tests${NC}"
 
 if [ ! -d "onnx" ]; then
     echo -e "${RED}ERROR: onnx directory not found!${NC}"
-    echo "Please create an 'onnx' directory in research/bge-m3 and add the required ONNX files."
+    echo "Please create an 'onnx' directory in the repository root and add the required ONNX files."
     exit 1
 fi
 
@@ -80,4 +80,26 @@ fi
 popd > /dev/null
 
 echo -e "${GREEN}.NET tests passed successfully!${NC}"
+
+# Step 3: Run Java tests
+echo -e "${YELLOW}Running Java tests...${NC}"
+
+# Check if Maven is available
+if ! command -v mvn &> /dev/null; then
+    echo -e "${RED}ERROR: mvn command not found!${NC}"
+    echo "Please install Maven to run Java tests."
+    exit 1
+fi
+
+pushd samples/java/bge-m3-onnx > /dev/null
+mvn test
+
+if [ $? -ne 0 ]; then
+    echo -e "${RED}ERROR: Java tests failed!${NC}"
+    popd > /dev/null
+    exit 1
+fi
+popd > /dev/null
+
+echo -e "${GREEN}Java tests passed successfully!${NC}"
 echo -e "${GREEN}All BGE-M3 tests passed successfully!${NC}"

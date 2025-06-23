@@ -17,7 +17,7 @@ Write-Yellow "Starting BGE-M3 ONNX model tests"
 
 if (-not (Test-Path "onnx")) {
     Write-Red "ERROR: onnx directory not found!"
-    Write-Host "Please create an 'onnx' directory in research/bge-m3 and add the required ONNX files."
+    Write-Host "Please create an 'onnx' directory in the repository root and add the required ONNX files."
     exit 1
 }
 
@@ -108,4 +108,34 @@ try {
 }
 
 Write-Green ".NET tests passed successfully!"
+
+# Step 3: Run Java tests
+Write-Yellow "Running Java tests..."
+
+# Check if Maven is available
+try {
+    $mavenVersion = mvn --version
+    Write-Host "Found Maven: $($mavenVersion -split "`n" | Select-Object -First 1)"
+} catch {
+    Write-Red "ERROR: Maven command not found!"
+    Write-Host "Please install Maven to run Java tests."
+    exit 1
+}
+
+Push-Location "samples\java\bge-m3-onnx"
+try {
+    mvn test
+    if ($LASTEXITCODE -ne 0) {
+        Write-Red "ERROR: Java tests failed!"
+        exit 1
+    }
+} catch {
+    Write-Red "ERROR: Java tests failed!"
+    Write-Host $_.Exception.Message
+    exit 1
+} finally {
+    Pop-Location
+}
+
+Write-Green "Java tests passed successfully!"
 Write-Green "All BGE-M3 tests passed successfully!"
