@@ -37,7 +37,7 @@ fi
 echo "Found Python: $(python3 --version)"
 
 # Check if required packages are installed
-PACKAGES=("onnxruntime" "onnxruntime-extensions" "numpy")
+PACKAGES=("onnx" "onnxruntime" "onnxruntime-extensions" "numpy")
 MISSING_PACKAGES=()
 
 for pkg in "${PACKAGES[@]}"; do
