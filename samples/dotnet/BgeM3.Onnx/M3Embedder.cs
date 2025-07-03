@@ -34,7 +34,7 @@ public class M3Embedder : IDisposable
     /// <param name="config">Configuration for execution providers and other options</param>
     public M3Embedder(string tokenizerPath, string modelPath, M3EmbedderConfig config)
     {
-        _config = config ?? new M3EmbedderConfig();
+        _config = config;
 
         // Initialize tokenizer session with ONNX Extensions (CPU-only)
         var tokenizerOptions = CreateSessionOptions(forTokenizer: true);
