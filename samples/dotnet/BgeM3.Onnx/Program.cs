@@ -11,49 +11,73 @@ var modelPath = Path.Combine(onnxDir, "bge_m3_model.onnx");
 // Sample text to test with
 string text = "A test text! Texto de prueba! Текст для теста! 測試文字! Testtext! Testez le texte! Сынақ мәтіні! Тестни текст! परीक्षण पाठ! Kiểm tra văn bản!";
 
-Console.WriteLine("===== BGE-M3 ONNX Embedding Research =====");
-Console.WriteLine($"Using tokenizer: {tokenizerPath}");
-Console.WriteLine($"Using model: {modelPath}");
+Console.WriteLine("===== BGE-M3 ONNX Multi-Provider Test =====");
+Console.WriteLine($"Tokenizer: {Path.GetFileName(tokenizerPath)}");
+Console.WriteLine($"Model: {Path.GetFileName(modelPath)}");
 
-// Create the embedding generator with all 3 vector types enabled
-using var embeddingGenerator = new M3Embedder(tokenizerPath, modelPath);
+// Test CPU provider
+Console.WriteLine("\n===== CPU PROVIDER =====");
+TestProvider("CPU", () => M3EmbedderFactory.CreateCpuOptimized(tokenizerPath, modelPath), text);
 
-var embeddings = embeddingGenerator.GenerateEmbeddings(text);
-
-// Print dense embedding information
-Console.WriteLine("\n=== DENSE EMBEDDING ===");
-var denseEmbedding = embeddings.DenseEmbedding;
-Console.WriteLine($"Length: {denseEmbedding.Length}");
-Console.WriteLine($"First 10 values: [{string.Join(", ", denseEmbedding.Take(10).Select(v => v.ToString("F6", CultureInfo.InvariantCulture)))}]");
-
-// Print sparse weights information
-Console.WriteLine("\n=== SPARSE WEIGHTS ===");
-var sparseWeights = embeddings.SparseWeights;
-
-Console.WriteLine($"Non-zero tokens: {sparseWeights.Count}");
-
-// Top tokens
-var topWeights = sparseWeights
-    .OrderByDescending(kv => kv.Value)
-    .Take(5)
-    .ToList();
-
-Console.WriteLine("Top 5 tokens:");
-foreach (var (tokenId, weight) in topWeights)
+// Test CUDA provider
+Console.WriteLine("\n===== CUDA PROVIDER =====");
+try
 {
-    Console.WriteLine($"  {tokenId}: {weight:F6}");
+    TestProvider("CUDA", () => M3EmbedderFactory.CreateCudaOptimized(tokenizerPath, modelPath), text);
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"✗ CUDA not available: {ex.Message}");
 }
 
-// Print ColBERT vectors information
-Console.WriteLine("\n=== COLBERT VECTORS ===");
-var colbertVectors = embeddings.ColBertVectors;
+Console.WriteLine("\n===== TEST COMPLETE =====");
 
-Console.WriteLine($"Token count: {colbertVectors.Length}");
-Console.WriteLine($"Vector dimension: {colbertVectors[0].Length}");
+static void TestProvider(string providerName, Func<M3Embedder> embedderFactory, string testText)
+{
+    using var embedder = embedderFactory();
 
-// Print first vector
-Console.WriteLine("First vector (first 10 values):");
-Console.WriteLine($"[{string.Join(", ", colbertVectors[0].Take(10).Select(v => v.ToString("F6", CultureInfo.InvariantCulture)))}]");
+    Console.WriteLine($"Provider: {embedder.Config.ExecutionProvider}");
 
-Console.WriteLine("\n===== SUCCESS =====");
-Console.WriteLine("All embedding types generated successfully!");
+    // Generate embeddings
+    var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+    var embeddings = embedder.GenerateEmbeddings(testText);
+    stopwatch.Stop();
+
+    Console.WriteLine($"Inference time: {stopwatch.ElapsedMilliseconds}ms");
+
+    // Print dense embedding information
+    Console.WriteLine("\n=== DENSE EMBEDDING ===");
+    var denseEmbedding = embeddings.DenseEmbedding;
+    Console.WriteLine($"Length: {denseEmbedding.Length}");
+    Console.WriteLine($"First 10 values: [{string.Join(", ", denseEmbedding.Take(10).Select(v => v.ToString("F6", CultureInfo.InvariantCulture)))}]");
+
+    // Print sparse weights information
+    Console.WriteLine("\n=== SPARSE WEIGHTS ===");
+    var sparseWeights = embeddings.SparseWeights;
+    Console.WriteLine($"Non-zero tokens: {sparseWeights.Count}");
+
+    // Top tokens
+    var topWeights = sparseWeights
+        .OrderByDescending(kv => kv.Value)
+        .Take(5)
+        .ToList();
+
+    Console.WriteLine("Top 5 tokens:");
+    foreach (var (tokenId, weight) in topWeights)
+    {
+        Console.WriteLine($"  {tokenId}: {weight:F6}");
+    }
+
+    // Print ColBERT vectors information
+    Console.WriteLine("\n=== COLBERT VECTORS ===");
+    var colbertVectors = embeddings.ColBertVectors;
+    Console.WriteLine($"Token count: {colbertVectors.Length}");
+    if (colbertVectors.Length > 0)
+    {
+        Console.WriteLine($"Vector dimension: {colbertVectors[0].Length}");
+        Console.WriteLine("First vector (first 10 values):");
+        Console.WriteLine($"[{string.Join(", ", colbertVectors[0].Take(10).Select(v => v.ToString("F6", CultureInfo.InvariantCulture)))}]");
+    }
+
+    Console.WriteLine($"\n✓ {providerName} completed successfully!");
+}

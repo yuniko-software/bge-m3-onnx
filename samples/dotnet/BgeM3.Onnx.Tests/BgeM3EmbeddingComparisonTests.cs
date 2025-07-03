@@ -135,7 +135,7 @@ public sealed class BgeM3EmbeddingComparisonTests : IDisposable
         return dotProduct / (Math.Sqrt(normA) * Math.Sqrt(normB));
     }
 
-    private bool AreSparseWeightsEqual(Dictionary<int, float> csharpWeights, Dictionary<int, float> pythonWeights)
+    private static bool AreSparseWeightsEqual(Dictionary<int, float> csharpWeights, Dictionary<int, float> pythonWeights)
     {
         if (csharpWeights.Count != pythonWeights.Count)
         {
