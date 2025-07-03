@@ -4,29 +4,113 @@ using Microsoft.ML.OnnxRuntime.Tensors;
 namespace BgeM3.Onnx;
 
 /// <summary>
-/// Provides functionality to generate embeddings using ONNX bge-m3 model
+/// Provides functionality to generate embeddings using ONNX bge-m3 model with multi-provider support
 /// </summary>
 public class M3Embedder : IDisposable
 {
     private readonly InferenceSession _tokenizerSession;
     private readonly InferenceSession _modelSession;
     private readonly HashSet<int> _specialTokenIds = [0, 1, 2, 3]; // [PAD], [UNK], [CLS], [SEP]
+    private readonly M3EmbedderConfig _config;
     private bool _disposed;
 
     /// <summary>
-    /// Initializes a new instance of the M3Embedder class
+    /// Gets the configuration used by this embedder
+    /// </summary>
+    public M3EmbedderConfig Config => _config;
+
+    /// <summary>
+    /// Initializes a new instance of the M3Embedder class with default CPU provider
     /// </summary>
     /// <param name="tokenizerPath">Path to the ONNX tokenizer model</param>
     /// <param name="modelPath">Path to the ONNX embedding model</param>
-    public M3Embedder(string tokenizerPath, string modelPath)
+    public M3Embedder(string tokenizerPath, string modelPath) : this(tokenizerPath, modelPath, new M3EmbedderConfig()) { }
+
+    /// <summary>
+    /// Initializes a new instance of the M3Embedder class with specified configuration
+    /// </summary>
+    /// <param name="tokenizerPath">Path to the ONNX tokenizer model</param>
+    /// <param name="modelPath">Path to the ONNX embedding model</param>
+    /// <param name="config">Configuration for execution providers and other options</param>
+    public M3Embedder(string tokenizerPath, string modelPath, M3EmbedderConfig config)
     {
-        // Initialize tokenizer session with ONNX Extensions
-        using var tokenizerOptions = new SessionOptions();
+        _config = config;
+
+        // Initialize tokenizer session with ONNX Extensions (CPU-only)
+        var tokenizerOptions = CreateSessionOptions(forTokenizer: true);
         tokenizerOptions.RegisterOrtExtensions();
         _tokenizerSession = new InferenceSession(tokenizerPath, tokenizerOptions);
 
-        // Initialize model session
-        _modelSession = new InferenceSession(modelPath);
+        // Initialize model session with specified execution provider
+        var modelOptions = CreateSessionOptions(forTokenizer: false);
+        _modelSession = new InferenceSession(modelPath, modelOptions);
+    }
+
+    /// <summary>
+    /// Creates session options with appropriate execution providers
+    /// </summary>
+    private SessionOptions CreateSessionOptions(bool forTokenizer)
+    {
+        var sessionOptions = new SessionOptions
+        {
+            EnableMemoryPattern = _config.EnableMemoryPattern,
+            EnableCpuMemArena = _config.EnableCpuMemArena,
+            LogSeverityLevel = _config.LogSeverityLevel
+        };
+
+        // For tokenizer, we use CPU since it involves ONNX Extensions
+        // and string processing which may not be optimized for GPU
+        if (forTokenizer)
+        {
+            return sessionOptions;
+        }
+
+        // For the main model, apply the requested execution providers
+        var providers = GetProviderList();
+
+        foreach (var provider in providers)
+        {
+            switch (provider)
+            {
+                case ExecutionProvider.CUDA:
+                    sessionOptions.AppendExecutionProvider_CUDA(_config.CudaDeviceId);
+                    break;
+
+                case ExecutionProvider.CPU:
+                    // CPU is always available and added by default
+                    break;
+
+                default:
+                    throw new ArgumentException($"Unsupported execution provider: {provider}");
+            }
+        }
+
+        return sessionOptions;
+    }
+
+    /// <summary>
+    /// Gets the list of execution providers to try in order
+    /// </summary>
+    private List<ExecutionProvider> GetProviderList()
+    {
+        var providers = new List<ExecutionProvider> { _config.ExecutionProvider };
+
+        // Add fallback providers if they're different from the primary
+        foreach (var fallback in _config.FallbackProviders)
+        {
+            if (fallback != _config.ExecutionProvider && !providers.Contains(fallback))
+            {
+                providers.Add(fallback);
+            }
+        }
+
+        // Always ensure CPU is available as the final fallback
+        if (!providers.Contains(ExecutionProvider.CPU))
+        {
+            providers.Add(ExecutionProvider.CPU);
+        }
+
+        return providers;
     }
 
     /// <summary>
@@ -134,7 +218,7 @@ public class M3Embedder : IDisposable
     /// <summary>
     /// Extract ColBERT vectors from model output
     /// </summary>
-    private float[][] ExtractColBertVectors(NamedOnnxValue colbertOutput, long[] attentionMask)
+    private static float[][] ExtractColBertVectors(NamedOnnxValue colbertOutput, long[] attentionMask)
     {
         var colbertVectors = new List<float[]>();
         var tensor = colbertOutput.AsTensor<float>();
