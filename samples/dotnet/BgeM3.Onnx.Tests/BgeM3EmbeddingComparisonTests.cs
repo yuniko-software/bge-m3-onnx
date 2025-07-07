@@ -134,7 +134,7 @@ public sealed class BgeM3EmbeddingComparisonTests : IDisposable
         }
     }
 
-    [Fact]
+    [SkippableFact]
     public void CudaEmbeddings_ShouldMatchPythonEmbeddings()
     {
         // Skip test if CUDA is not available
