@@ -45,17 +45,17 @@ public sealed class BgeM3EmbeddingComparisonTests : IDisposable
         _cpuEmbedder = M3EmbedderFactory.CreateCpuOptimized(tokenizerPath, modelPath);
 
         // Try to initialize CUDA embedder
-        try
-        {
-            _cudaEmbedder = M3EmbedderFactory.CreateCudaOptimized(tokenizerPath, modelPath);
-            _cudaAvailable = true;
-        }
-        catch (Exception)
-        {
-            // CUDA not available, embedder will be null
-            _cudaEmbedder = null;
-            _cudaAvailable = false;
-        }
+        //try
+        //{
+        _cudaEmbedder = M3EmbedderFactory.CreateCudaOptimized(tokenizerPath, modelPath);
+        _cudaAvailable = true;
+        //}
+        //catch (Exception)
+        //{
+        //    // CUDA not available, embedder will be null
+        //    _cudaEmbedder = null;
+        //    _cudaAvailable = false;
+        //}
 
         // Load reference embeddings
         var jsonContent = File.ReadAllText(referenceFile);
