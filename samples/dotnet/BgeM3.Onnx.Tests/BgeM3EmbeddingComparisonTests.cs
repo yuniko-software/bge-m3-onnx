@@ -1,4 +1,5 @@
-﻿using System.Globalization;
+﻿using Microsoft.ML.OnnxRuntime;
+using System.Globalization;
 using System.Text.Json;
 
 namespace BgeM3.Onnx.Tests;
@@ -45,17 +46,17 @@ public sealed class BgeM3EmbeddingComparisonTests : IDisposable
         _cpuEmbedder = M3EmbedderFactory.CreateCpuOptimized(tokenizerPath, modelPath);
 
         // Try to initialize CUDA embedder
-        //try
-        //{
-        _cudaEmbedder = M3EmbedderFactory.CreateCudaOptimized(tokenizerPath, modelPath);
-        _cudaAvailable = true;
-        //}
-        //catch (Exception)
-        //{
-        //    // CUDA not available, embedder will be null
-        //    _cudaEmbedder = null;
-        //    _cudaAvailable = false;
-        //}
+        try
+        {
+            _cudaEmbedder = M3EmbedderFactory.CreateCudaOptimized(tokenizerPath, modelPath);
+            _cudaAvailable = true;
+        }
+        catch (OnnxRuntimeException)
+        {
+            // CUDA not available, embedder will be null
+            _cudaEmbedder = null;
+            _cudaAvailable = false;
+        }
 
         // Load reference embeddings
         var jsonContent = File.ReadAllText(referenceFile);
@@ -91,47 +92,7 @@ public sealed class BgeM3EmbeddingComparisonTests : IDisposable
     [Fact]
     public void CpuEmbeddings_ShouldMatchPythonEmbeddings()
     {
-        var failedComparisons = new List<string>();
-
-        foreach (var entry in _referenceEmbeddings)
-        {
-            var text = entry.Key;
-            var referenceEmbedding = entry.Value;
-
-            try
-            {
-                var result = _cpuEmbedder.GenerateEmbeddings(text);
-
-                // Verify we're using CPU provider
-                Assert.Equal(ExecutionProvider.CPU, _cpuEmbedder.Config.ExecutionProvider);
-
-                var denseSimilarity = CalculateCosineSimilarity(result.DenseEmbedding, referenceEmbedding.DenseVecs);
-                if (denseSimilarity <= 0.9999)
-                {
-                    failedComparisons.Add($"CPU Dense similarity {denseSimilarity:F10} for '{text}'");
-                }
-
-                if (!AreSparseWeightsEqual(result.SparseWeights, referenceEmbedding.LexicalWeights))
-                {
-                    failedComparisons.Add($"CPU Sparse weights mismatch for '{text}'");
-                }
-
-                if (!AreColBertVectorsEqual(result.ColBertVectors, referenceEmbedding.ColbertVecs))
-                {
-                    failedComparisons.Add($"CPU ColBERT vectors mismatch for '{text}'");
-                }
-            }
-            catch (Exception ex)
-            {
-                failedComparisons.Add($"CPU Exception for '{text}': {ex.Message}");
-            }
-        }
-
-        if (failedComparisons.Count != 0)
-        {
-            var errorMessage = $"CPU embedding comparison failures:\n{string.Join("\n", failedComparisons)}";
-            Assert.Fail(errorMessage);
-        }
+        ValidateEmbeddingsAgainstReference(_cpuEmbedder, "CPU");
     }
 
     [SkippableFact]
@@ -141,7 +102,16 @@ public sealed class BgeM3EmbeddingComparisonTests : IDisposable
         Skip.If(!_cudaAvailable, "CUDA provider is not available on this system");
 
         Assert.NotNull(_cudaEmbedder);
+        ValidateEmbeddingsAgainstReference(_cudaEmbedder, "CUDA");
+    }
 
+    /// <summary>
+    /// Helper method to validate embeddings against Python reference embeddings
+    /// </summary>
+    /// <param name="embedder">The embedder instance to test</param>
+    /// <param name="providerName">Name of the execution provider for error messages</param>
+    private void ValidateEmbeddingsAgainstReference(M3Embedder embedder, string providerName)
+    {
         var failedComparisons = new List<string>();
 
         foreach (var entry in _referenceEmbeddings)
@@ -151,36 +121,37 @@ public sealed class BgeM3EmbeddingComparisonTests : IDisposable
 
             try
             {
-                var result = _cudaEmbedder.GenerateEmbeddings(text);
+                var result = embedder.GenerateEmbeddings(text);
 
-                // Verify we're using CUDA provider
-                Assert.Equal(ExecutionProvider.CUDA, _cudaEmbedder.Config.ExecutionProvider);
+                // Verify we're using the expected provider
+                var expectedProvider = providerName == "CPU" ? ExecutionProvider.CPU : ExecutionProvider.CUDA;
+                Assert.Equal(expectedProvider, embedder.Config.ExecutionProvider);
 
                 var denseSimilarity = CalculateCosineSimilarity(result.DenseEmbedding, referenceEmbedding.DenseVecs);
                 if (denseSimilarity <= 0.9999)
                 {
-                    failedComparisons.Add($"CUDA Dense similarity {denseSimilarity:F10} for '{text}'");
+                    failedComparisons.Add($"{providerName} Dense similarity {denseSimilarity:F10} for '{text}'");
                 }
 
                 if (!AreSparseWeightsEqual(result.SparseWeights, referenceEmbedding.LexicalWeights))
                 {
-                    failedComparisons.Add($"CUDA Sparse weights mismatch for '{text}'");
+                    failedComparisons.Add($"{providerName} Sparse weights mismatch for '{text}'");
                 }
 
                 if (!AreColBertVectorsEqual(result.ColBertVectors, referenceEmbedding.ColbertVecs))
                 {
-                    failedComparisons.Add($"CUDA ColBERT vectors mismatch for '{text}'");
+                    failedComparisons.Add($"{providerName} ColBERT vectors mismatch for '{text}'");
                 }
             }
             catch (Exception ex)
             {
-                failedComparisons.Add($"CUDA Exception for '{text}': {ex.Message}");
+                failedComparisons.Add($"{providerName} Exception for '{text}': {ex.Message}");
             }
         }
 
         if (failedComparisons.Count != 0)
         {
-            var errorMessage = $"CUDA embedding comparison failures:\n{string.Join("\n", failedComparisons)}";
+            var errorMessage = $"{providerName} embedding comparison failures:\n{string.Join("\n", failedComparisons)}";
             Assert.Fail(errorMessage);
         }
     }
