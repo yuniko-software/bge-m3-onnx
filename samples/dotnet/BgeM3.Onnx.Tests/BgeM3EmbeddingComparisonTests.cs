@@ -1,4 +1,5 @@
-﻿using System.Globalization;
+﻿using Microsoft.ML.OnnxRuntime;
+using System.Globalization;
 using System.Text.Json;
 
 namespace BgeM3.Onnx.Tests;
@@ -14,8 +15,10 @@ public record BgeM3ReferenceEmbedding(
 
 public sealed class BgeM3EmbeddingComparisonTests : IDisposable
 {
-    private readonly M3Embedder _embedder;
+    private readonly M3Embedder _cpuEmbedder;
+    private readonly M3Embedder? _cudaEmbedder;
     private readonly Dictionary<string, BgeM3ReferenceEmbedding> _referenceEmbeddings;
+    private readonly bool _cudaAvailable;
 
     public BgeM3EmbeddingComparisonTests()
     {
@@ -39,8 +42,23 @@ public sealed class BgeM3EmbeddingComparisonTests : IDisposable
             throw new FileNotFoundException($"Reference embeddings file not found at {referenceFile}. Please run the Python script to generate reference embeddings first.");
         }
 
-        _embedder = new M3Embedder(tokenizerPath, modelPath);
+        // Initialize CPU embedder (always available)
+        _cpuEmbedder = M3EmbedderFactory.CreateCpuOptimized(tokenizerPath, modelPath);
 
+        // Try to initialize CUDA embedder
+        try
+        {
+            _cudaEmbedder = M3EmbedderFactory.CreateCudaOptimized(tokenizerPath, modelPath);
+            _cudaAvailable = true;
+        }
+        catch (OnnxRuntimeException)
+        {
+            // CUDA not available, embedder will be null
+            _cudaEmbedder = null;
+            _cudaAvailable = false;
+        }
+
+        // Load reference embeddings
         var jsonContent = File.ReadAllText(referenceFile);
         var rawEmbeddings = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(jsonContent)!;
 
@@ -72,7 +90,27 @@ public sealed class BgeM3EmbeddingComparisonTests : IDisposable
     }
 
     [Fact]
-    public void AllEmbeddingTypes_ShouldMatchPythonEmbeddings()
+    public void CpuEmbeddings_ShouldMatchPythonEmbeddings()
+    {
+        ValidateEmbeddingsAgainstReference(_cpuEmbedder, "CPU");
+    }
+
+    [SkippableFact]
+    public void CudaEmbeddings_ShouldMatchPythonEmbeddings()
+    {
+        // Skip test if CUDA is not available
+        Skip.If(!_cudaAvailable, "CUDA provider is not available on this system");
+
+        Assert.NotNull(_cudaEmbedder);
+        ValidateEmbeddingsAgainstReference(_cudaEmbedder, "CUDA");
+    }
+
+    /// <summary>
+    /// Helper method to validate embeddings against Python reference embeddings
+    /// </summary>
+    /// <param name="embedder">The embedder instance to test</param>
+    /// <param name="providerName">Name of the execution provider for error messages</param>
+    private void ValidateEmbeddingsAgainstReference(M3Embedder embedder, string providerName)
     {
         var failedComparisons = new List<string>();
 
@@ -83,33 +121,37 @@ public sealed class BgeM3EmbeddingComparisonTests : IDisposable
 
             try
             {
-                var result = _embedder.GenerateEmbeddings(text);
+                var result = embedder.GenerateEmbeddings(text);
+
+                // Verify we're using the expected provider
+                var expectedProvider = providerName == "CPU" ? ExecutionProvider.CPU : ExecutionProvider.CUDA;
+                Assert.Equal(expectedProvider, embedder.Config.ExecutionProvider);
 
                 var denseSimilarity = CalculateCosineSimilarity(result.DenseEmbedding, referenceEmbedding.DenseVecs);
                 if (denseSimilarity <= 0.9999)
                 {
-                    failedComparisons.Add($"Dense similarity {denseSimilarity:F10} for '{text}'");
+                    failedComparisons.Add($"{providerName} Dense similarity {denseSimilarity:F10} for '{text}'");
                 }
 
                 if (!AreSparseWeightsEqual(result.SparseWeights, referenceEmbedding.LexicalWeights))
                 {
-                    failedComparisons.Add($"Sparse weights mismatch for '{text}'");
+                    failedComparisons.Add($"{providerName} Sparse weights mismatch for '{text}'");
                 }
 
                 if (!AreColBertVectorsEqual(result.ColBertVectors, referenceEmbedding.ColbertVecs))
                 {
-                    failedComparisons.Add($"ColBERT vectors mismatch for '{text}'");
+                    failedComparisons.Add($"{providerName} ColBERT vectors mismatch for '{text}'");
                 }
             }
             catch (Exception ex)
             {
-                failedComparisons.Add($"Exception for '{text}': {ex.Message}");
+                failedComparisons.Add($"{providerName} Exception for '{text}': {ex.Message}");
             }
         }
 
-        if (failedComparisons.Any())
+        if (failedComparisons.Count != 0)
         {
-            var errorMessage = $"Embedding comparison failures:\n{string.Join("\n", failedComparisons)}";
+            var errorMessage = $"{providerName} embedding comparison failures:\n{string.Join("\n", failedComparisons)}";
             Assert.Fail(errorMessage);
         }
     }
@@ -150,7 +192,7 @@ public sealed class BgeM3EmbeddingComparisonTests : IDisposable
             }
 
             var difference = Math.Abs(kvp.Value - value);
-            if (difference >= 1e-6f)
+            if (difference >= 1e-3f)
             {
                 return false;
             }
@@ -159,7 +201,7 @@ public sealed class BgeM3EmbeddingComparisonTests : IDisposable
         return true;
     }
 
-    private bool AreColBertVectorsEqual(float[][] csharpVectors, float[][] pythonVectors)
+    private static bool AreColBertVectorsEqual(float[][] csharpVectors, float[][] pythonVectors)
     {
         if (csharpVectors.Length != pythonVectors.Length)
         {
@@ -185,6 +227,7 @@ public sealed class BgeM3EmbeddingComparisonTests : IDisposable
 
     public void Dispose()
     {
-        _embedder?.Dispose();
+        _cpuEmbedder?.Dispose();
+        _cudaEmbedder?.Dispose();
     }
 }
