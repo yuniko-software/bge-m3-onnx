@@ -45,10 +45,6 @@ class BgeM3Embedder:
             model_path,
             providers=model_providers
         )
-        
-        # Verify the actual provider being used
-        actual_provider = self.model_session.get_providers()[0]
-        logger.info(f"Model using provider: {actual_provider}")
     
     def _get_model_providers(self) -> List[Union[str, tuple]]:
         """Get the list of execution providers for the model session"""
@@ -158,7 +154,7 @@ class BgeM3Embedder:
     def __enter__(self):
         return self
     
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self):
         self.close()
 
 

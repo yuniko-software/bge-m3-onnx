@@ -1,6 +1,7 @@
 import json
 import os
 import argparse
+import sys
 from bge_m3_embedder import create_cpu_embedder, create_cuda_embedder
 
 
