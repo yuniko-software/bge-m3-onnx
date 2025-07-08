@@ -47,7 +47,7 @@ try {
 }
 
 # Check if required packages are installed
-$packages = @("onnx" "onnxruntime", "onnxruntime_extensions", "numpy")
+$packages = @("onnx", "onnxruntime", "onnxruntime_extensions", "numpy")
 $missingPackages = @()
 
 foreach ($pkg in $packages) {
@@ -75,6 +75,7 @@ if ($missingPackages.Count -gt 0) {
 }
 
 # Run the Python script to generate reference embeddings
+Push-Location "samples\python"
 try {
     python generate_reference_embeddings.py
     if ($LASTEXITCODE -ne 0) {
@@ -85,6 +86,8 @@ try {
     Write-Red "ERROR: Failed to generate reference embeddings!"
     Write-Host $_.Exception.Message
     exit 1
+} finally {
+    Pop-Location
 }
 
 Write-Green "Reference embeddings generated successfully!"
