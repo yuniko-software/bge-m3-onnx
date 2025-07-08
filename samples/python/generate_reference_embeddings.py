@@ -89,7 +89,7 @@ def main():
         print(f"ERROR: Failed to generate embeddings: {e}")
         if args.provider == 'cuda':
             print("If you're having CUDA issues, try using --provider cpu")
-        raise
+        sys.exit(1)
     
     finally:
         if 'embedder' in locals():
