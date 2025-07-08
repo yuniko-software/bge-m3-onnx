@@ -58,11 +58,14 @@ if [ ${#MISSING_PACKAGES[@]} -gt 0 ]; then
 fi
 
 # Run the Python script to generate reference embeddings
+pushd samples/python > /dev/null
 python3 generate_reference_embeddings.py
 if [ $? -ne 0 ]; then
     echo -e "${RED}ERROR: Failed to generate reference embeddings!${NC}"
+    popd > /dev/null
     exit 1
 fi
+popd > /dev/null
 
 echo -e "${GREEN}Reference embeddings generated successfully!${NC}"
 
