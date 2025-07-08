@@ -53,11 +53,10 @@ class BgeM3Embedder:
         """Configure session options matching C# implementation"""
         options = ort.SessionOptions()
         
+        options.enable_mem_pattern = True
         if self.provider == "cuda":
-            options.enable_mem_pattern = True
             options.enable_cpu_mem_arena = False
         else:
-            options.enable_mem_pattern = True
             options.enable_cpu_mem_arena = True
         
         options.log_severity_level = 2
