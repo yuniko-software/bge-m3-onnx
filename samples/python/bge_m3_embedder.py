@@ -41,10 +41,31 @@ class BgeM3Embedder:
         
         # Initialize model session with specified provider
         model_providers = self._get_model_providers()
+        model_options = self._get_model_session_options()
+        
         self.model_session = ort.InferenceSession(
             model_path,
+            sess_options=model_options,
             providers=model_providers
         )
+    
+    def _get_model_session_options(self) -> ort.SessionOptions:
+        """Configure session options matching C# implementation"""
+        options = ort.SessionOptions()
+        
+        if self.provider == "cuda":
+            options.enable_mem_pattern = True
+            options.enable_cpu_mem_arena = False
+        else:
+            options.enable_mem_pattern = True
+            options.enable_cpu_mem_arena = True
+        
+        options.log_severity_level = 2
+        
+        # Set optimization level
+        options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_BASIC
+        
+        return options
     
     def _get_model_providers(self) -> List[Union[str, tuple]]:
         """Get the list of execution providers for the model session"""
@@ -54,10 +75,6 @@ class BgeM3Embedder:
                 'CUDAExecutionProvider', 
                 {
                     'device_id': self.device_id,
-                    'arena_extend_strategy': 'kNextPowerOfTwo',
-                    'gpu_mem_limit': 2 * 1024 * 1024 * 1024,  # 2GB
-                    'cudnn_conv_algo_search': 'EXHAUSTIVE',
-                    'do_copy_in_default_stream': True,
                 }
             )
             return [cuda_provider, 'CPUExecutionProvider']

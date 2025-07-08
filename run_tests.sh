@@ -37,7 +37,7 @@ fi
 echo "Found Python: $(python3 --version)"
 
 # Check if required packages are installed
-PACKAGES=("onnx" "onnxruntime" "onnxruntime-extensions" "numpy")
+PACKAGES=("onnx" "onnxruntime" "onnxruntime-extensions" "numpy" "pytest" "torch" "transformers" "FlagEmbedding")
 MISSING_PACKAGES=()
 
 for pkg in "${PACKAGES[@]}"; do
@@ -69,7 +69,21 @@ popd > /dev/null
 
 echo -e "${GREEN}Reference embeddings generated successfully!${NC}"
 
-# Step 2: Run .NET tests
+# Step 2: Run Python tests
+echo -e "${YELLOW}Running Python tests...${NC}"
+
+pushd samples/python > /dev/null
+python3 bge_m3_tests.py
+if [ $? -ne 0 ]; then
+    echo -e "${RED}ERROR: Python tests failed!${NC}"
+    popd > /dev/null
+    exit 1
+fi
+popd > /dev/null
+
+echo -e "${GREEN}Python tests passed successfully!${NC}"
+
+# Step 3: Run .NET tests
 echo -e "${YELLOW}Running .NET tests...${NC}"
 
 pushd samples/dotnet/BgeM3.Onnx.Tests > /dev/null
@@ -84,7 +98,7 @@ popd > /dev/null
 
 echo -e "${GREEN}.NET tests passed successfully!${NC}"
 
-# Step 3: Run Java tests
+# Step 4: Run Java tests
 echo -e "${YELLOW}Running Java tests...${NC}"
 
 # Check if Maven is available

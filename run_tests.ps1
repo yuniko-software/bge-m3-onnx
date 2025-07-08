@@ -47,7 +47,7 @@ try {
 }
 
 # Check if required packages are installed
-$packages = @("onnx", "onnxruntime", "onnxruntime_extensions", "numpy")
+$packages = @("onnx", "onnxruntime", "onnxruntime_extensions", "numpy", "pytest", "torch", "transformers", "FlagEmbedding")
 $missingPackages = @()
 
 foreach ($pkg in $packages) {
@@ -92,7 +92,27 @@ try {
 
 Write-Green "Reference embeddings generated successfully!"
 
-# Step 2: Run .NET tests
+# Step 2: Run Python tests
+Write-Yellow "Running Python tests..."
+
+Push-Location "samples\python"
+try {
+    python bge_m3_tests.py
+    if ($LASTEXITCODE -ne 0) {
+        Write-Red "ERROR: Python tests failed!"
+        exit 1
+    }
+} catch {
+    Write-Red "ERROR: Python tests failed!"
+    Write-Host $_.Exception.Message
+    exit 1
+} finally {
+    Pop-Location
+}
+
+Write-Green "Python tests passed successfully!"
+
+# Step 3: Run .NET tests
 Write-Yellow "Running .NET tests..."
 
 Push-Location "samples\dotnet\BgeM3.Onnx.Tests"
@@ -112,7 +132,7 @@ try {
 
 Write-Green ".NET tests passed successfully!"
 
-# Step 3: Run Java tests
+# Step 4: Run Java tests
 Write-Yellow "Running Java tests..."
 
 # Check if Maven is available
