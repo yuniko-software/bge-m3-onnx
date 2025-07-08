@@ -36,11 +36,11 @@ def main():
     # Verify files exist
     if not os.path.exists(tokenizer_path):
         print(f"ERROR: Tokenizer file not found at {tokenizer_path}")
-        return
+        sys.exit(1)
     
     if not os.path.exists(model_path):
         print(f"ERROR: Model file not found at {model_path}")
-        return
+        sys.exit(1)
 
     # Initialize the BGE-M3 embedder with specified provider
     print("Initializing BGE-M3 ONNX embedder...")
