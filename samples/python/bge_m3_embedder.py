@@ -48,7 +48,7 @@ class BgeM3Embedder:
         
         # Verify the actual provider being used
         actual_provider = self.model_session.get_providers()[0]
-        print(f"Model using provider: {actual_provider}")
+        logger.info(f"Model using provider: {actual_provider}")
     
     def _get_model_providers(self) -> List[Union[str, tuple]]:
         """Get the list of execution providers for the model session"""
