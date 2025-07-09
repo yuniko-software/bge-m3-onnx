@@ -5,30 +5,115 @@ import ai.onnxruntime.extensions.OrtxPackage;
 import java.util.*;
 
 /**
- * Provides functionality to generate embeddings using ONNX BGE-M3 model
+ * Provides functionality to generate embeddings using ONNX BGE-M3 model with multi-provider support
  */
 public class M3Embedder implements AutoCloseable {
     private final OrtSession tokenizerSession;
     private final OrtSession modelSession;
     private final Set<Integer> specialTokenIds = Set.of(0, 1, 2, 3); // [PAD], [UNK], [CLS], [SEP]
+    private final M3EmbedderConfig config;
 
     /**
-     * Initializes a new instance of the M3Embedder class
+     * Initializes a new instance of the M3Embedder class with default CPU provider
      * 
      * @param tokenizerPath Path to the ONNX tokenizer model
      * @param modelPath     Path to the ONNX BGE-M3 model
      * @throws OrtException If there's an error initializing the ONNX sessions
      */
     public M3Embedder(String tokenizerPath, String modelPath) throws OrtException {
+        this(tokenizerPath, modelPath, new M3EmbedderConfig());
+    }
+
+    /**
+     * Initializes a new instance of the M3Embedder class with specified configuration
+     * 
+     * @param tokenizerPath Path to the ONNX tokenizer model
+     * @param modelPath     Path to the ONNX BGE-M3 model
+     * @param config        Configuration for execution providers and other options
+     * @throws OrtException If there's an error initializing the ONNX sessions
+     */
+    public M3Embedder(String tokenizerPath, String modelPath, M3EmbedderConfig config) throws OrtException {
+        this.config = config;
         OrtEnvironment environment = OrtEnvironment.getEnvironment();
 
-        // Initialize tokenizer session with ONNX Extensions
-        OrtSession.SessionOptions tokenizerOptions = new OrtSession.SessionOptions();
+        // Initialize tokenizer session with ONNX Extensions (CPU-only)
+        OrtSession.SessionOptions tokenizerOptions = createSessionOptions(true);
         tokenizerOptions.registerCustomOpLibrary(OrtxPackage.getLibraryPath());
         this.tokenizerSession = environment.createSession(tokenizerPath, tokenizerOptions);
 
-        // Initialize model session
-        this.modelSession = environment.createSession(modelPath);
+        // Initialize model session with specified execution provider
+        OrtSession.SessionOptions modelOptions = createSessionOptions(false);
+        this.modelSession = environment.createSession(modelPath, modelOptions);
+    }
+
+    /**
+     * Gets the configuration used by this embedder
+     * 
+     * @return The configuration
+     */
+    public M3EmbedderConfig getConfig() {
+        return config;
+    }
+
+    /**
+     * Creates session options with appropriate execution providers
+     */
+    private OrtSession.SessionOptions createSessionOptions(boolean forTokenizer) throws OrtException {
+        OrtSession.SessionOptions sessionOptions = new OrtSession.SessionOptions();
+        
+        sessionOptions.setMemoryPatternOptimization(config.isEnableMemoryPattern());
+        sessionOptions.setCPUArenaAllocator(config.isEnableCpuMemArena());
+        sessionOptions.setSessionLogLevel(OrtLoggingLevel.values()[config.getLogSeverityLevel()]);
+
+        // For tokenizer, we use CPU since it involves ONNX Extensions
+        // and string processing which may not be optimized for GPU
+        if (forTokenizer) {
+            return sessionOptions;
+        }
+
+        // For the main model, apply the requested execution providers
+        List<ExecutionProvider> providers = getProviderList();
+
+        for (ExecutionProvider provider : providers) {
+            switch (provider) {
+                case CUDA:
+                    Map<String, String> cudaOptions = new HashMap<>();
+                    cudaOptions.put("device_id", String.valueOf(config.getCudaDeviceId()));
+                    sessionOptions.addCUDA(config.getCudaDeviceId());
+                    break;
+
+                case CPU:
+                    // CPU is always available and added by default
+                    break;
+
+                default:
+                    throw new IllegalArgumentException("Unsupported execution provider: " + provider);
+            }
+        }
+
+        return sessionOptions;
+    }
+
+    /**
+     * Gets the list of execution providers to try in order
+     */
+    private List<ExecutionProvider> getProviderList() {
+        List<ExecutionProvider> providers = new ArrayList<>();
+        providers.add(config.getExecutionProvider());
+
+        // Add fallback providers if they're different from the primary
+        for (ExecutionProvider fallback : config.getFallbackProviders()) {
+            if (fallback != config.getExecutionProvider() && !providers.contains(fallback)) {
+                providers.add(fallback);
+            }
+        }
+
+        // Always ensure CPU is available as the final fallback
+        if (!providers.contains(ExecutionProvider.CPU)) {
+            providers.add(ExecutionProvider.CPU);
+        }
+
+        return providers;
     }
 
     /**
