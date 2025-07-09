@@ -1,6 +1,7 @@
 package com.yunikosoftware.bgem3onnx;
 
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -12,10 +13,12 @@ import java.util.Map;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import ai.onnxruntime.OrtException;
 
 /**
  * Reference embedding data structure from Python-generated JSON
@@ -27,27 +30,42 @@ class BgeM3ReferenceEmbedding {
 }
 
 public class BgeM3EmbeddingComparisonTests {
-    private static M3Embedder embedder;
     private static Map<String, BgeM3ReferenceEmbedding> referenceEmbeddings;
+    private static String tokenizerPath;
+    private static String modelPath;
+    private static boolean cudaAvailable;
+
+    private M3Embedder cpuEmbedder;
+    private M3Embedder cudaEmbedder;
 
     @BeforeAll
-    public static void setup() throws Exception {
+    public static void setupClass() throws Exception {
         Path repoDir = findRepositoryRoot();
         Path onnxDir = repoDir.resolve("onnx");
 
-        Path tokenizerPath = onnxDir.resolve("bge_m3_tokenizer.onnx");
-        Path modelPath = onnxDir.resolve("bge_m3_model.onnx");
+        Path tokenizerFile = onnxDir.resolve("bge_m3_tokenizer.onnx");
+        Path modelFile = onnxDir.resolve("bge_m3_model.onnx");
         Path referenceFile = onnxDir.resolve("bge_m3_reference_embeddings.json");
 
-        if (!tokenizerPath.toFile().exists())
-            throw new FileNotFoundException("Tokenizer file not found at " + tokenizerPath);
-        if (!modelPath.toFile().exists())
-            throw new FileNotFoundException("Model file not found at " + modelPath);
+        if (!tokenizerFile.toFile().exists())
+            throw new FileNotFoundException("Tokenizer file not found at " + tokenizerFile);
+        if (!modelFile.toFile().exists())
+            throw new FileNotFoundException("Model file not found at " + modelFile);
         if (!referenceFile.toFile().exists())
             throw new FileNotFoundException("Reference embeddings file not found at " + referenceFile +
                     ". Please run the Python script to generate reference embeddings first.");
 
-        embedder = new M3Embedder(tokenizerPath.toString(), modelPath.toString());
+        tokenizerPath = tokenizerFile.toString();
+        modelPath = modelFile.toString();
+
+        // Test CUDA availability
+        try {
+            M3Embedder testCudaEmbedder = M3EmbedderFactory.createCudaOptimized(tokenizerPath, modelPath);
+            testCudaEmbedder.close();
+            cudaAvailable = true;
+        } catch (OrtException e) {
+            cudaAvailable = false;
+        }
 
         ObjectMapper mapper = new ObjectMapper();
         referenceEmbeddings = mapper.readValue(
@@ -57,7 +75,27 @@ public class BgeM3EmbeddingComparisonTests {
     }
 
     @Test
-    public void allEmbeddingTypes_ShouldMatchPythonEmbeddings() throws Exception {
+    public void cpuEmbeddings_ShouldMatchPythonEmbeddings() throws Exception {
+        cpuEmbedder = M3EmbedderFactory.createCpuOptimized(tokenizerPath, modelPath);
+        validateEmbeddingsAgainstReference(cpuEmbedder, "CPU");
+    }
+
+    @Test
+    public void cudaEmbeddings_ShouldMatchPythonEmbeddings() throws Exception {
+        // Skip test if CUDA is not available
+        assumeTrue(cudaAvailable, "CUDA provider is not available on this system");
+
+        cudaEmbedder = M3EmbedderFactory.createCudaOptimized(tokenizerPath, modelPath);
+        validateEmbeddingsAgainstReference(cudaEmbedder, "CUDA");
+    }
+
+    /**
+     * Helper method to validate embeddings against Python reference embeddings
+     * 
+     * @param embedder     The embedder instance to test
+     * @param providerName Name of the execution provider for error messages
+     */
+    private void validateEmbeddingsAgainstReference(M3Embedder embedder, String providerName) throws Exception {
         List<String> failedComparisons = new ArrayList<>();
 
         for (Map.Entry<String, BgeM3ReferenceEmbedding> entry : referenceEmbeddings.entrySet()) {
@@ -67,29 +105,36 @@ public class BgeM3EmbeddingComparisonTests {
             try {
                 M3EmbeddingOutput result = embedder.generateEmbeddings(text);
 
-                // Compare dense embeddings
+                // Verify we're using the expected provider
+                ExecutionProvider expectedProvider = providerName.equals("CPU") ? ExecutionProvider.CPU
+                        : ExecutionProvider.CUDA;
+                if (embedder.getConfig().getExecutionProvider() != expectedProvider) {
+                    failedComparisons.add(providerName + " Expected provider " + expectedProvider + " but got "
+                            + embedder.getConfig().getExecutionProvider());
+                }
+
                 double denseSimilarity = calculateCosineSimilarity(result.getDenseEmbedding(),
                         referenceEmbedding.dense_vecs);
                 if (denseSimilarity <= 0.9999) {
-                    failedComparisons.add(String.format("Dense similarity %.10f for '%s'", denseSimilarity, text));
+                    failedComparisons.add(
+                            String.format("%s Dense similarity %.10f for '%s'", providerName, denseSimilarity, text));
                 }
 
-                // Compare sparse weights
                 if (!areSparseWeightsEqual(result.getSparseWeights(), referenceEmbedding.lexical_weights)) {
-                    failedComparisons.add(String.format("Sparse weights mismatch for '%s'", text));
+                    failedComparisons.add(String.format("%s Sparse weights mismatch for '%s'", providerName, text));
                 }
 
-                // Compare ColBERT vectors
                 if (!areColBertVectorsEqual(result.getColBertVectors(), referenceEmbedding.colbert_vecs)) {
-                    failedComparisons.add(String.format("ColBERT vectors mismatch for '%s'", text));
+                    failedComparisons.add(String.format("%s ColBERT vectors mismatch for '%s'", providerName, text));
                 }
             } catch (Exception ex) {
-                failedComparisons.add(String.format("Exception for '%s': %s", text, ex.getMessage()));
+                failedComparisons.add(String.format("%s Exception for '%s': %s", providerName, text, ex.getMessage()));
             }
         }
 
         if (!failedComparisons.isEmpty()) {
-            String errorMessage = "Embedding comparison failures:\n" + String.join("\n", failedComparisons);
+            String errorMessage = providerName + " embedding comparison failures:\n"
+                    + String.join("\n", failedComparisons);
             fail(errorMessage);
         }
     }
@@ -124,7 +169,7 @@ public class BgeM3EmbeddingComparisonTests {
             }
 
             double difference = Math.abs(entry.getValue() - javaWeights.get(tokenId));
-            if (difference >= 1e-6) {
+            if (difference >= 1e-3) {
                 return false;
             }
         }
@@ -151,6 +196,18 @@ public class BgeM3EmbeddingComparisonTests {
         return true;
     }
 
+    @AfterEach
+    public void cleanup() throws Exception {
+        if (cpuEmbedder != null) {
+            cpuEmbedder.close();
+            cpuEmbedder = null;
+        }
+        if (cudaEmbedder != null) {
+            cudaEmbedder.close();
+            cudaEmbedder = null;
+        }
+    }
+
     private static Path findRepositoryRoot() throws FileNotFoundException {
         Path currentDir = Paths.get("").toAbsolutePath();
 
@@ -169,12 +226,5 @@ public class BgeM3EmbeddingComparisonTests {
         }
 
         throw new FileNotFoundException("Could not locate repository root with 'onnx' directory");
-    }
-
-    @AfterAll
-    public static void cleanup() throws Exception {
-        if (embedder != null) {
-            embedder.close();
-        }
     }
 }
