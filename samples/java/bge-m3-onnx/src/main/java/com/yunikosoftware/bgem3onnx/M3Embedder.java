@@ -77,8 +77,6 @@ public class M3Embedder implements AutoCloseable {
         for (ExecutionProvider provider : providers) {
             switch (provider) {
                 case CUDA:
-                    Map<String, String> cudaOptions = new HashMap<>();
-                    cudaOptions.put("device_id", String.valueOf(config.getCudaDeviceId()));
                     sessionOptions.addCUDA(config.getCudaDeviceId());
                     break;
 
