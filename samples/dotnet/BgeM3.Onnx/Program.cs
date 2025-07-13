@@ -27,7 +27,7 @@ try
 }
 catch (Exception ex)
 {
-    Console.WriteLine($"✗ CUDA not available: {ex.Message}");
+    Console.WriteLine($"CUDA not available: {ex.Message}");
 }
 
 Console.WriteLine("\n===== TEST COMPLETE =====");

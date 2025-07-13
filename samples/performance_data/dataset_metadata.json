@@ -1,0 +1,41 @@
+{
+  "total_texts": 1000,
+  "statistics": {
+    "length_distribution": {
+      "medium": 42,
+      "long": 4,
+      "short": 954
+    },
+    "language_distribution": {
+      "russian": 18,
+      "arabic": 18,
+      "spanish": 26,
+      "chinese": 24,
+      "english": 914
+    },
+    "domain_distribution": {
+      "technology": 366,
+      "healthcare": 15,
+      "education": 54,
+      "general": 481,
+      "business": 84
+    },
+    "source_distribution": {
+      "technical": 28,
+      "synthetic": 824,
+      "predefined": 148
+    },
+    "word_count_stats": {
+      "min": 1,
+      "max": 223,
+      "avg": 9.839,
+      "median": 8
+    },
+    "char_count_stats": {
+      "min": 8,
+      "max": 1836,
+      "avg": 76.897,
+      "median": 63
+    }
+  }
+}
