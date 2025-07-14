@@ -53,6 +53,7 @@ public class PerformanceMain {
             } catch (Exception ex) {
                 System.err.println("ERROR: Failed to load test dataset: " + ex.getMessage());
                 System.exit(1);
+                return;
             }
 
             // Initialize benchmark runner
