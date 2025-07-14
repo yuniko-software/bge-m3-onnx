@@ -59,10 +59,8 @@ public class BgeM3EmbeddingComparisonTests {
         modelPath = modelFile.toString();
 
         // Test CUDA availability
-        try {
-            M3Embedder testCudaEmbedder = M3EmbedderFactory.createCudaOptimized(tokenizerPath, modelPath);
-            testCudaEmbedder.close();
-            cudaAvailable = true;
+        try (M3Embedder testCudaEmbedder = M3EmbedderFactory.createCudaOptimized(tokenizerPath, modelPath)) {
+            cudaAvailable = testCudaEmbedder.getConfig().getExecutionProvider() == ExecutionProvider.CUDA;
         } catch (OrtException e) {
             cudaAvailable = false;
         }
