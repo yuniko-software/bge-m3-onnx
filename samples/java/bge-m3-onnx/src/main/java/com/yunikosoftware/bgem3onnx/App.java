@@ -5,8 +5,10 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.DecimalFormat;
 import java.util.Map;
-import java.util.function.Supplier;
 
+/**
+ * Sample application demonstrating BGE-M3 ONNX usage
+ */
 public class App {
     private static final DecimalFormat df = new DecimalFormat("#.######");
 
@@ -22,7 +24,7 @@ public class App {
             // Sample text to test with
             String text = "A test text! Texto de prueba! Текст для теста! 測試文字! Testtext! Testez le texte! Сынақ мәтіні! Тестни текст! परीक्षण पाठ! Kiểm tra văn bản!";
 
-            System.out.println("===== BGE-M3 ONNX Multi-Provider Test =====");
+            System.out.println("===== BGE-M3 ONNX Multi-Provider Demo =====");
             System.out.println("Tokenizer: " + tokenizerPath.getFileName());
             System.out.println("Model: " + modelPath.getFileName());
 
@@ -50,7 +52,7 @@ public class App {
                 System.out.println("CUDA not available: " + ex.getMessage());
             }
 
-            System.out.println("\n===== TEST COMPLETE =====");
+            System.out.println("\n===== DEMO COMPLETE =====");
 
         } catch (Exception e) {
             System.err.println("Error: " + e.getMessage());
@@ -59,7 +61,7 @@ public class App {
         }
     }
 
-    private static void testProvider(String providerName, Supplier<M3Embedder> embedderFactory, String testText) {
+    private static void testProvider(String providerName, EmbedderSupplier embedderFactory, String testText) {
         try (M3Embedder embedder = embedderFactory.get()) {
             System.out.println("Provider: " + embedder.getConfig().getExecutionProvider());
 
@@ -137,5 +139,10 @@ public class App {
         }
 
         throw new FileNotFoundException("Could not locate repository root with 'onnx' directory");
+    }
+
+    @FunctionalInterface
+    private interface EmbedderSupplier {
+        M3Embedder get() throws Exception;
     }
 }
