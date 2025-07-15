@@ -1,12 +1,8 @@
 ﻿using BgeM3.Onnx;
 using System.Globalization;
 
-// Define paths relative to the project
-var repoDir = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "..", "..", ".."));
-var onnxDir = Path.Combine(repoDir, "onnx");
-
-var tokenizerPath = Path.Combine(onnxDir, "bge_m3_tokenizer.onnx");
-var modelPath = Path.Combine(onnxDir, "bge_m3_model.onnx");
+var tokenizerPath = RepositoryUtils.GetTokenizerPath();
+var modelPath = RepositoryUtils.GetModelPath();
 
 // Sample text to test with
 string text = "A test text! Texto de prueba! Текст для теста! 測試文字! Testtext! Testez le texte! Сынақ мәтіні! Тестни текст! परीक्षण पाठ! Kiểm tra văn bản!";

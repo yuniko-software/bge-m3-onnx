@@ -205,21 +205,9 @@ public class Program
 {
     public static async Task<int> Main()
     {
-        // Find repository root and paths
-        var currentDir = Directory.GetCurrentDirectory();
-        var repoRoot = FindRepositoryRoot(currentDir);
-
-        if (repoRoot == null)
-        {
-            Console.WriteLine("ERROR: Could not locate repository root");
-            return 1;
-        }
-
-        var performanceDataDir = Path.Combine(repoRoot, "samples", "performance_data");
-        var onnxDir = Path.Combine(repoRoot, "onnx");
-
-        var tokenizerPath = Path.Combine(onnxDir, "bge_m3_tokenizer.onnx");
-        var modelPath = Path.Combine(onnxDir, "bge_m3_model.onnx");
+        var performanceDataDir = RepositoryUtils.GetPerformanceDataDirectory();
+        var tokenizerPath = RepositoryUtils.GetTokenizerPath();
+        var modelPath = RepositoryUtils.GetModelPath();
 
         Console.WriteLine("=" + new string('=', 59));
         Console.WriteLine("BGE-M3 C# Performance Benchmark");
@@ -351,8 +339,7 @@ public class Program
         }
 
         // Save results
-        Directory.CreateDirectory(onnxDir);
-        var outputPath = Path.Combine(onnxDir, "performance_dotnet.json");
+        var outputPath = Path.Combine(RepositoryUtils.GetOnnxDirectory(), "performance_dotnet.json");
 
         var jsonOptions = new JsonSerializerOptions
         {
@@ -407,27 +394,5 @@ public class Program
         var dataset = JsonSerializer.Deserialize<List<TestText>>(jsonString) ?? throw new InvalidOperationException("Failed to deserialize test dataset");
 
         return dataset;
-    }
-
-    private static string? FindRepositoryRoot(string startPath)
-    {
-        var currentDir = new DirectoryInfo(startPath);
-
-        for (int i = 0; i < 10; i++)
-        {
-            var onnxDir = Path.Combine(currentDir.FullName, "onnx");
-
-            if (Directory.Exists(onnxDir))
-            {
-                return currentDir.FullName;
-            }
-
-            if (currentDir.Parent == null)
-                break;
-
-            currentDir = currentDir.Parent;
-        }
-
-        return null;
     }
 }

@@ -40,12 +40,9 @@ public class BgeM3EmbeddingComparisonTests {
 
     @BeforeAll
     public static void setupClass() throws Exception {
-        Path repoDir = findRepositoryRoot();
-        Path onnxDir = repoDir.resolve("onnx");
-
-        Path tokenizerFile = onnxDir.resolve("bge_m3_tokenizer.onnx");
-        Path modelFile = onnxDir.resolve("bge_m3_model.onnx");
-        Path referenceFile = onnxDir.resolve("bge_m3_reference_embeddings.json");
+        Path tokenizerFile = RepositoryUtils.getTokenizerPath();
+        Path modelFile = RepositoryUtils.getModelPath();
+        Path referenceFile = RepositoryUtils.getOnnxDirectory().resolve("bge_m3_reference_embeddings.json");
 
         if (!tokenizerFile.toFile().exists())
             throw new FileNotFoundException("Tokenizer file not found at " + tokenizerFile);
@@ -204,25 +201,5 @@ public class BgeM3EmbeddingComparisonTests {
             cudaEmbedder.close();
             cudaEmbedder = null;
         }
-    }
-
-    private static Path findRepositoryRoot() throws FileNotFoundException {
-        Path currentDir = Paths.get("").toAbsolutePath();
-
-        // Search up the directory tree for the repository root
-        for (int i = 0; i < 10; i++) {
-            Path onnxDir = currentDir.resolve("onnx");
-
-            if (onnxDir.toFile().exists() && onnxDir.toFile().isDirectory()) {
-                return currentDir;
-            }
-
-            Path parent = currentDir.getParent();
-            if (parent == null)
-                break;
-            currentDir = parent;
-        }
-
-        throw new FileNotFoundException("Could not locate repository root with 'onnx' directory");
     }
 }
