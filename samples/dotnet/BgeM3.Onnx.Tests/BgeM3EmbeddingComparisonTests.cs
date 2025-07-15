@@ -22,12 +22,9 @@ public sealed class BgeM3EmbeddingComparisonTests : IDisposable
 
     public BgeM3EmbeddingComparisonTests()
     {
-        var repoDir = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "..", ".."));
-        var onnxDir = Path.Combine(repoDir, "onnx");
-
-        var tokenizerPath = Path.Combine(onnxDir, "bge_m3_tokenizer.onnx");
-        var modelPath = Path.Combine(onnxDir, "bge_m3_model.onnx");
-        var referenceFile = Path.Combine(onnxDir, "bge_m3_reference_embeddings.json");
+        var tokenizerPath = RepositoryUtils.GetTokenizerPath();
+        var modelPath = RepositoryUtils.GetModelPath();
+        var referenceFile = Path.Combine(RepositoryUtils.GetOnnxDirectory(), "bge_m3_reference_embeddings.json");
 
         if (!File.Exists(tokenizerPath))
         {

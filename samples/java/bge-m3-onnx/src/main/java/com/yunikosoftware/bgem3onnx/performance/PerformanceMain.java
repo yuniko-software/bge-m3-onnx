@@ -3,11 +3,11 @@ package com.yunikosoftware.bgem3onnx.performance;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.yunikosoftware.bgem3onnx.RepositoryUtils;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
@@ -21,12 +21,10 @@ public class PerformanceMain {
     public static void main(String[] args) {
         try {
             // Find repository root and paths
-            Path repoRoot = findRepositoryRoot();
-            Path performanceDataDir = repoRoot.resolve("samples").resolve("performance_data");
-            Path onnxDir = repoRoot.resolve("onnx");
-
-            Path tokenizerPath = onnxDir.resolve("bge_m3_tokenizer.onnx");
-            Path modelPath = onnxDir.resolve("bge_m3_model.onnx");
+            Path performanceDataDir = RepositoryUtils.getPerformanceDataDirectory();
+            Path onnxDir = RepositoryUtils.getOnnxDirectory();
+            Path tokenizerPath = RepositoryUtils.getTokenizerPath();
+            Path modelPath = RepositoryUtils.getModelPath();
 
             System.out.println("=" + "=".repeat(59));
             System.out.println("BGE-M3 Java Performance Benchmark");
@@ -163,28 +161,5 @@ public class PerformanceMain {
 
         ObjectMapper objectMapper = new ObjectMapper();
         return objectMapper.readValue(datasetFile, new TypeReference<List<TestText>>() {});
-    }
-
-    /**
-     * Find repository root by looking for 'onnx' directory
-     */
-    private static Path findRepositoryRoot() throws FileNotFoundException {
-        Path currentDir = Paths.get("").toAbsolutePath();
-
-        for (int i = 0; i < 10; i++) {
-            Path onnxDir = currentDir.resolve("onnx");
-
-            if (onnxDir.toFile().exists() && onnxDir.toFile().isDirectory()) {
-                return currentDir;
-            }
-
-            Path parent = currentDir.getParent();
-            if (parent == null) {
-                break;
-            }
-            currentDir = parent;
-        }
-
-        throw new FileNotFoundException("Could not locate repository root with 'onnx' directory");
     }
 }

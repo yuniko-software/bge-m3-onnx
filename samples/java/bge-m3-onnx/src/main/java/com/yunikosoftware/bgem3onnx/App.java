@@ -1,8 +1,5 @@
 package com.yunikosoftware.bgem3onnx;
 
-import java.io.FileNotFoundException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.text.DecimalFormat;
 import java.util.Map;
 
@@ -14,12 +11,9 @@ public class App {
 
     public static void main(String[] args) {
         try {
-            // Define paths relative to the project
-            Path repoDir = findRepositoryRoot();
-            Path onnxDir = repoDir.resolve("onnx");
-
-            Path tokenizerPath = onnxDir.resolve("bge_m3_tokenizer.onnx");
-            Path modelPath = onnxDir.resolve("bge_m3_model.onnx");
+            // Use utility class for paths
+            var tokenizerPath = RepositoryUtils.getTokenizerPath();
+            var modelPath = RepositoryUtils.getModelPath();
 
             // Sample text to test with
             String text = "A test text! Texto de prueba! Текст для теста! 測試文字! Testtext! Testez le texte! Сынақ мәтіні! Тестни текст! परीक्षण पाठ! Kiểm tra văn bản!";
@@ -119,26 +113,6 @@ public class App {
         } catch (Exception e) {
             throw new RuntimeException("Failed to test " + providerName + " provider", e);
         }
-    }
-
-    private static Path findRepositoryRoot() throws FileNotFoundException {
-        Path currentDir = Paths.get("").toAbsolutePath();
-
-        // Search up the directory tree for the repository root
-        for (int i = 0; i < 10; i++) {
-            Path onnxDir = currentDir.resolve("onnx");
-
-            if (onnxDir.toFile().exists() && onnxDir.toFile().isDirectory()) {
-                return currentDir;
-            }
-
-            Path parent = currentDir.getParent();
-            if (parent == null)
-                break;
-            currentDir = parent;
-        }
-
-        throw new FileNotFoundException("Could not locate repository root with 'onnx' directory");
     }
 
     @FunctionalInterface
