@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
