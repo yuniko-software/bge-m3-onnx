@@ -47,7 +47,7 @@ try {
 }
 
 # Check if required packages are installed
-$packages = @("onnx", "onnxruntime", "onnxruntime_extensions", "numpy", "pytest", "torch", "transformers", "FlagEmbedding")
+$packages = @("onnx", "onnxruntime", "onnxruntime_extensions", "numpy", "pytest", "transformers", "FlagEmbedding")
 $missingPackages = @()
 
 foreach ($pkg in $packages) {

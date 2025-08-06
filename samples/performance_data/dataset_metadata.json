@@ -2,28 +2,28 @@
   "total_texts": 1000,
   "statistics": {
     "length_distribution": {
+      "short": 954,
       "medium": 42,
-      "long": 4,
-      "short": 954
+      "long": 4
     },
     "language_distribution": {
-      "arabic": 18,
+      "chinese": 24,
       "spanish": 26,
+      "arabic": 18,
       "russian": 18,
-      "english": 914,
-      "chinese": 24
+      "english": 914
     },
     "domain_distribution": {
-      "technology": 366,
-      "healthcare": 15,
       "general": 481,
-      "business": 84,
-      "education": 54
+      "healthcare": 15,
+      "technology": 366,
+      "education": 54,
+      "business": 84
     },
     "source_distribution": {
-      "synthetic": 824,
       "predefined": 148,
-      "technical": 28
+      "technical": 28,
+      "synthetic": 824
     },
     "word_count_stats": {
       "min": 1,
