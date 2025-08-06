@@ -9,7 +9,6 @@ from FlagEmbedding.inference.embedder.encoder_only.m3 import M3Embedder as FlagM
 class BGE_M3_Reference_Wrapper:
     """Reference wrapper using FlagEmbedding's M3Embedder for comparison"""
     def __init__(self, model_name_or_path="BAAI/bge-m3"):
-        super().__init__()
         self.embedder = FlagM3EmbedderClass(
             model_name_or_path=model_name_or_path,
             use_fp16=False,
