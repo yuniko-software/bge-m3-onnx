@@ -55,6 +55,8 @@ class BgeM3Embedder:
         
         options.enable_mem_pattern = True
         if self.provider == "cuda":
+            # Preload DLLs from NVIDIA site packages
+            ort.preload_dlls()
             options.enable_cpu_mem_arena = False
         else:
             options.enable_cpu_mem_arena = True

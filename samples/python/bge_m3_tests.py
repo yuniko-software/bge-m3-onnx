@@ -1,17 +1,14 @@
 import pytest
 import numpy as np
 import os
-import torch
-import torch.nn as nn
 from typing import Dict, List
 from bge_m3_embedder import create_cpu_embedder, create_cuda_embedder
 from transformers import AutoTokenizer
 from FlagEmbedding.inference.embedder.encoder_only.m3 import M3Embedder as FlagM3EmbedderClass
 
-class BGE_M3_Reference_Wrapper(nn.Module):
+class BGE_M3_Reference_Wrapper:
     """Reference wrapper using FlagEmbedding's M3Embedder for comparison"""
     def __init__(self, model_name_or_path="BAAI/bge-m3"):
-        super().__init__()
         self.embedder = FlagM3EmbedderClass(
             model_name_or_path=model_name_or_path,
             use_fp16=False,
@@ -40,7 +37,7 @@ class BGE_M3_Reference_Wrapper(nn.Module):
 
 
 class TestBgeM3EmbeddingComparison:
-    """Test class for comparing ONNX and Transformers BGE-M3 implementations"""
+    """Test class for comparing ONNX and FlagEmbedding BGE-M3 implementations"""
     
     @classmethod
     def setup_class(cls):
@@ -71,8 +68,8 @@ class TestBgeM3EmbeddingComparison:
         # Initialize reference model once for all tests
         cls.reference_embedder = BGE_M3_Reference_Wrapper("BAAI/bge-m3")
     
-    def test_cpu_embeddings_match_transformers(self):
-        """Test that CPU ONNX embeddings match Transformers implementation"""
+    def test_cpu_embeddings_match_flagembedding(self):
+        """Test that CPU ONNX embeddings match FlagEmbedding implementation"""
         print("\n=== Testing CPU Provider ===")
         
         with create_cpu_embedder(self.tokenizer_path, self.model_path) as onnx_embedder:
@@ -81,8 +78,8 @@ class TestBgeM3EmbeddingComparison:
             
             self._compare_embeddings_with_reference(onnx_embedder, "CPU")
     
-    def test_cuda_embeddings_match_transformers(self):
-        """Test that CUDA ONNX embeddings match Transformers implementation"""
+    def test_cuda_embeddings_match_flagembedding(self):
+        """Test that CUDA ONNX embeddings match FlagEmbedding implementation"""
         print("\n=== Testing CUDA Provider ===")
         
         try:
@@ -100,8 +97,8 @@ class TestBgeM3EmbeddingComparison:
     
     def _compare_embeddings_with_reference(self, onnx_embedder, provider_name: str):
         """
-        Compare ONNX embeddings with reference Transformers implementation
-        
+        Compare ONNX embeddings with reference FlagEmbedding implementation
+
         Args:
             onnx_embedder: ONNX embedder instance
             provider_name: Name of the execution provider for error messages

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 BGE-M3 Performance Testing Script for Python
-Tests Transformers BGE-M3, Python ONNX CPU, and Python ONNX CUDA implementations
+Tests FlagEmbedding BGE-M3, Python ONNX CPU, and Python ONNX CUDA implementations
 """
 
 import json
@@ -15,7 +15,6 @@ from datetime import datetime
 script_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, script_dir)
 
-import torch
 from FlagEmbedding.inference.embedder.encoder_only.m3 import M3Embedder as FlagM3Embedder
 from bge_m3_embedder import create_cpu_embedder, create_cuda_embedder
 
@@ -89,9 +88,9 @@ class BenchmarkRunner:
             "failed_embeddings": sum(1 for r in results if r is None),
             "per_text_latencies_ms": [l * 1000 for l in latencies]
         }
-        
-    def benchmark_transformers(self, texts: List[str]) -> Dict[str, Any]:
-        """Benchmark original Transformers BGE-M3 implementation"""
+
+    def benchmark_flagembedding(self, texts: List[str]) -> Dict[str, Any]:
+        """Benchmark FlagEmbedding BGE-M3 implementation"""
         # Initialize model
         init_start = time.time()
         embedder = FlagM3Embedder(
@@ -100,8 +99,8 @@ class BenchmarkRunner:
             normalize_embeddings=True
         )
         init_time = time.time() - init_start
-        
-        # Define encode function for transformers
+
+        # Define encode function for FlagEmbedding
         def encode_func(text):
             return embedder.encode(
                 text,
@@ -111,7 +110,7 @@ class BenchmarkRunner:
             )
         
         # Run benchmark
-        result = self._run_benchmark_core(texts, "transformers_cpu", encode_func)
+        result = self._run_benchmark_core(texts, "flagembedding_cpu", encode_func)
         result["initialization_time_seconds"] = init_time
         
         return result
@@ -150,10 +149,6 @@ class BenchmarkRunner:
                 print("CUDA provider not available, skipping CUDA benchmark")
                 embedder.close()
                 return None
-            
-            # Clear GPU memory before benchmark
-            if torch.cuda.is_available():
-                torch.cuda.empty_cache()
             
             # Define encode function for ONNX CUDA
             def encode_func(text):
@@ -240,17 +235,17 @@ def main():
     
     print(f"\nRunning benchmarks on {len(texts)} texts...")
     
-    # Benchmark 1: Transformers BGE-M3
+    # Benchmark 1: FlagEmbedding BGE-M3
     try:
         print(f"\n{'-' * 40}")
-        result = runner.benchmark_transformers(texts)
-        results["scenarios"]["transformers_cpu"] = result
-        print(f"Transformers BGE-M3: {result['average_latency_ms']:.1f}ms avg, "
+        result = runner.benchmark_flagembedding(texts)
+        results["scenarios"]["flagembedding_cpu"] = result
+        print(f"FlagEmbedding BGE-M3: {result['average_latency_ms']:.1f}ms avg, "
               f"{result['throughput_texts_per_second']:.1f} texts/sec")
     except Exception as e:
-        print(f"Transformers benchmark failed: {e}")
-        results["scenarios"]["transformers_cpu"] = {"error": str(e)}
-    
+        print(f"FlagEmbedding benchmark failed: {e}")
+        results["scenarios"]["flagembedding_cpu"] = {"error": str(e)}
+
     # Benchmark 2: ONNX CPU
     try:
         print(f"\n{'-' * 40}")
@@ -263,25 +258,18 @@ def main():
         results["scenarios"]["onnx_cpu"] = {"error": str(e)}
     
     # Benchmark 3: ONNX CUDA
-    # Check CUDA availability before attempting
-    cuda_available = torch.cuda.is_available()
-    if cuda_available:
-        try:
-            print(f"\n{'-' * 40}")
-            result = runner.benchmark_onnx_cuda(texts)
-            if result:
-                results["scenarios"]["onnx_cuda"] = result
-                print(f"ONNX CUDA: {result['average_latency_ms']:.1f}ms avg, "
-                      f"{result['throughput_texts_per_second']:.1f} texts/sec")
-            else:
-                results["scenarios"]["onnx_cuda"] = {"error": "CUDA provider not available"}
-        except Exception as e:
-            print(f"ONNX CUDA benchmark failed: {e}")
-            results["scenarios"]["onnx_cuda"] = {"error": str(e)}
-    else:
+    try:
         print(f"\n{'-' * 40}")
-        print("ONNX CUDA: Skipped (CUDA not available)")
-        results["scenarios"]["onnx_cuda"] = {"error": "CUDA not available"}
+        result = runner.benchmark_onnx_cuda(texts)
+        if result:
+            results["scenarios"]["onnx_cuda"] = result
+            print(f"ONNX CUDA: {result['average_latency_ms']:.1f}ms avg, "
+                    f"{result['throughput_texts_per_second']:.1f} texts/sec")
+        else:
+            results["scenarios"]["onnx_cuda"] = {"error": "CUDA provider not available"}
+    except Exception as e:
+        print(f"ONNX CUDA benchmark failed: {e}")
+        results["scenarios"]["onnx_cuda"] = {"error": str(e)}
     
     # Save results
     os.makedirs(onnx_dir, exist_ok=True)
