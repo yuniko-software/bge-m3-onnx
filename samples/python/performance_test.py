@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """
 BGE-M3 Performance Testing Script for Python
-Tests FlagEmbedding BGE-M3, Python ONNX CPU, and Python ONNX CUDA implementations
+Tests FlagEmbedding BGE-M3 on CPU and CUDA, Python ONNX CPU, and Python ONNX CUDA implementations
 """
 
 import json
 import os
 import sys
 import time
+import torch
 from typing import Dict, List, Any, Optional, Callable
 from datetime import datetime
 
@@ -89,14 +90,15 @@ class BenchmarkRunner:
             "per_text_latencies_ms": [l * 1000 for l in latencies]
         }
 
-    def benchmark_flagembedding(self, texts: List[str]) -> Dict[str, Any]:
-        """Benchmark FlagEmbedding BGE-M3 implementation"""
-        # Initialize model
+    def benchmark_flagembedding_cpu(self, texts: List[str]) -> Dict[str, Any]:
+        """Benchmark FlagEmbedding BGE-M3 implementation on CPU"""
+        # Initialize model on CPU
         init_start = time.time()
         embedder = FlagM3Embedder(
             model_name_or_path="BAAI/bge-m3",
             use_fp16=False,
-            normalize_embeddings=True
+            normalize_embeddings=True,
+            devices="cpu"
         )
         init_time = time.time() - init_start
 
@@ -112,8 +114,47 @@ class BenchmarkRunner:
         # Run benchmark
         result = self._run_benchmark_core(texts, "flagembedding_cpu", encode_func)
         result["initialization_time_seconds"] = init_time
+        result["device_info"] = "CPU"
         
         return result
+
+    def benchmark_flagembedding_cuda(self, texts: List[str]) -> Optional[Dict[str, Any]]:
+        """Benchmark FlagEmbedding BGE-M3 implementation on CUDA"""
+        # Check if CUDA is available
+        if not torch.cuda.is_available():
+            print("CUDA not available for FlagEmbedding, skipping CUDA benchmark")
+            return None
+        
+        try:
+            # Initialize model on CUDA
+            init_start = time.time()
+            embedder = FlagM3Embedder(
+                model_name_or_path="BAAI/bge-m3",
+                use_fp16=False,
+                normalize_embeddings=True,
+                devices="cuda:0"
+            )
+            init_time = time.time() - init_start
+
+            # Define encode function for FlagEmbedding CUDA
+            def encode_func(text):
+                return embedder.encode(
+                    text,
+                    return_dense=True,
+                    return_sparse=True,
+                    return_colbert_vecs=True
+                )
+            
+            # Run benchmark
+            result = self._run_benchmark_core(texts, "flagembedding_cuda", encode_func)
+            result["initialization_time_seconds"] = init_time
+            result["device_info"] = f"CUDA:0 - {torch.cuda.get_device_name(0)}"
+            
+            return result
+            
+        except Exception as e:
+            print(f"FlagEmbedding CUDA benchmark failed: {e}")
+            return None
     
     def benchmark_onnx_cpu(self, texts: List[str]) -> Dict[str, Any]:
         """Benchmark ONNX CPU implementation"""
@@ -165,7 +206,7 @@ class BenchmarkRunner:
             return result
             
         except Exception as e:
-            print(f"CUDA benchmark failed: {e}")
+            print(f"ONNX CUDA benchmark failed: {e}")
             return None
 
 
@@ -201,6 +242,10 @@ def main():
     print(f"Performance data: {performance_data_dir}")
     print(f"Tokenizer: {tokenizer_path}")
     print(f"Model: {model_path}")
+    print(f"PyTorch CUDA available: {torch.cuda.is_available()}")
+    if torch.cuda.is_available():
+        print(f"CUDA device count: {torch.cuda.device_count()}")
+        print(f"CUDA device 0: {torch.cuda.get_device_name(0)}")
     
     # Verify required files exist
     for path in [tokenizer_path, model_path]:
@@ -228,25 +273,41 @@ def main():
         "test_info": {
             "timestamp": datetime.now().isoformat(),
             "test_dataset_size": len(texts),
-            "sample_texts": texts[:5]  # Store first 5 texts for reference
+            "sample_texts": texts[:5],  # Store first 5 texts for reference
+            "pytorch_cuda_available": torch.cuda.is_available(),
+            "cuda_device_count": torch.cuda.device_count() if torch.cuda.is_available() else 0
         },
         "scenarios": {}
     }
     
     print(f"\nRunning benchmarks on {len(texts)} texts...")
     
-    # Benchmark 1: FlagEmbedding BGE-M3
+    # Benchmark 1: FlagEmbedding BGE-M3 CPU
     try:
         print(f"\n{'-' * 40}")
-        result = runner.benchmark_flagembedding(texts)
+        result = runner.benchmark_flagembedding_cpu(texts)
         results["scenarios"]["flagembedding_cpu"] = result
-        print(f"FlagEmbedding BGE-M3: {result['average_latency_ms']:.1f}ms avg, "
+        print(f"FlagEmbedding CPU: {result['average_latency_ms']:.1f}ms avg, "
               f"{result['throughput_texts_per_second']:.1f} texts/sec")
     except Exception as e:
-        print(f"FlagEmbedding benchmark failed: {e}")
+        print(f"FlagEmbedding CPU benchmark failed: {e}")
         results["scenarios"]["flagembedding_cpu"] = {"error": str(e)}
 
-    # Benchmark 2: ONNX CPU
+    # Benchmark 2: FlagEmbedding BGE-M3 CUDA
+    try:
+        print(f"\n{'-' * 40}")
+        result = runner.benchmark_flagembedding_cuda(texts)
+        if result:
+            results["scenarios"]["flagembedding_cuda"] = result
+            print(f"FlagEmbedding CUDA: {result['average_latency_ms']:.1f}ms avg, "
+                  f"{result['throughput_texts_per_second']:.1f} texts/sec")
+        else:
+            results["scenarios"]["flagembedding_cuda"] = {"error": "CUDA not available for FlagEmbedding"}
+    except Exception as e:
+        print(f"FlagEmbedding CUDA benchmark failed: {e}")
+        results["scenarios"]["flagembedding_cuda"] = {"error": str(e)}
+
+    # Benchmark 3: ONNX CPU
     try:
         print(f"\n{'-' * 40}")
         result = runner.benchmark_onnx_cpu(texts)
@@ -257,7 +318,7 @@ def main():
         print(f"ONNX CPU benchmark failed: {e}")
         results["scenarios"]["onnx_cpu"] = {"error": str(e)}
     
-    # Benchmark 3: ONNX CUDA
+    # Benchmark 4: ONNX CUDA
     try:
         print(f"\n{'-' * 40}")
         result = runner.benchmark_onnx_cuda(texts)

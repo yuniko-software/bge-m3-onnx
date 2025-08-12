@@ -1,6 +1,7 @@
 import pytest
 import numpy as np
 import os
+import torch
 from typing import Dict, List
 from bge_m3_embedder import create_cpu_embedder, create_cuda_embedder
 from transformers import AutoTokenizer
