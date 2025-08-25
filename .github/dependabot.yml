@@ -1,0 +1,37 @@
+version: 2
+
+updates:
+# Java Maven dependencies
+- package-ecosystem: "maven"
+  directory: "/samples/java/bge-m3-onnx"
+  schedule:
+    interval: "weekly"
+  open-pull-requests-limit: 5
+
+# .NET NuGet dependencies for main project
+- package-ecosystem: "nuget"
+  directory: "/samples/dotnet/BgeM3.Onnx"
+  schedule:
+    interval: "weekly"
+  open-pull-requests-limit: 5
+
+# .NET NuGet dependencies for test project
+- package-ecosystem: "nuget"
+  directory: "/samples/dotnet/BgeM3.Onnx.Tests"
+  schedule:
+    interval: "weekly"
+  open-pull-requests-limit: 5
+
+# .NET NuGet dependencies for performance project
+- package-ecosystem: "nuget"
+  directory: "/samples/dotnet/BgeM3.Onnx.Performance"
+  schedule:
+    interval: "weekly"
+  open-pull-requests-limit: 5
+
+# GitHub Actions
+- package-ecosystem: "github-actions"
+  directory: "/"
+  schedule:
+    interval: "weekly"
+  open-pull-requests-limit: 3
