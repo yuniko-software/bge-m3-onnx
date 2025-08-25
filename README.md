@@ -1,8 +1,8 @@
 # BGE-M3 ONNX
 
-<img width="1589" height="1180" alt="image" src="https://github.com/user-attachments/assets/c30cf557-4b54-42be-adc6-1c84bb704337" />
-
 ![Build](https://github.com/yuniko-software/bge-m3-onnx/actions/workflows/ci-build.yml/badge.svg)
+
+<img width="1589" height="1180" alt="image" src="https://github.com/user-attachments/assets/c30cf557-4b54-42be-adc6-1c84bb704337" />
 
 This repository demonstrates how to convert the complete [BGE-M3](https://github.com/FlagOpen/FlagEmbedding) model to [ONNX](https://github.com/microsoft/onnxruntime) format and use it in multiple programming languages with **full multi-vector functionality**.
 
