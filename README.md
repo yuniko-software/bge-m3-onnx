@@ -1,5 +1,7 @@
 # BGE-M3 ONNX
 
+<img width="1589" height="1180" alt="image" src="https://github.com/user-attachments/assets/c30cf557-4b54-42be-adc6-1c84bb704337" />
+
 ![Build](https://github.com/yuniko-software/bge-m3-onnx/actions/workflows/ci-build.yml/badge.svg)
 
 This repository demonstrates how to convert the complete [BGE-M3](https://github.com/FlagOpen/FlagEmbedding) model to [ONNX](https://github.com/microsoft/onnxruntime) format and use it in multiple programming languages with **full multi-vector functionality**.
@@ -11,12 +13,14 @@ This repository demonstrates how to convert the complete [BGE-M3](https://github
 - Full control over the embedding pipeline with no external dependencies
 - Works offline without internet connectivity requirements
 - Cross-platform compatibility (C#, Java, Python)
+- CUDA GPU acceleration support
 
 ## Repository Structure
 
 - `bge-m3-to-onnx.ipynb` - Jupyter notebook demonstrating the BGE-M3 conversion process
-- `/samples/dotnet` - C# implementation and tests with full BGE-M3 support
-- `/samples/java` - Java implementation and tests with full BGE-M3 support
+- `/samples/dotnet` - C# implementation
+- `/samples/java` - Java implementation
+- `/samples/python` - Python implementation
 - `generate_reference_embeddings.py` - Script to generate reference embeddings for cross-language testing
 - `run_tests.sh` and `run_tests.ps1` - Test scripts for Linux/macOS and Windows
 
@@ -62,6 +66,29 @@ This repository demonstrates how to convert the complete [BGE-M3](https://github
      ```
    
    > Note: These scripts require Python, .NET, Java, and Maven to be installed.
+
+## CUDA Support
+
+This BGE-M3 ONNX model supports CUDA GPU acceleration for improved performance. To enable CUDA support:
+
+### Python
+Install the ONNX Runtime with CUDA support:
+
+**Resource**: [ONNX Runtime CUDA Execution Provider Requirements](https://onnxruntime.ai/docs/execution-providers/CUDA-ExecutionProvider.html#requirements)
+
+This model is compatible with:
+- `pip install onnxruntime-gpu[cuda,cudnn]` - packages that include CUDA and cuDNN DLLs
+- [PyTorch packages that include CUDA and cuDNN DLLs](https://pytorch.org/get-started/locally/)
+
+### C# and Java
+For C# and Java implementations, you need to install CUDA and cuDNN separately:
+
+**CUDA Installation:**
+- Linux: [CUDA Installation Guide for Linux](https://docs.nvidia.com/cuda/cuda-installation-guide-linux)
+- Windows: [CUDA Installation Guide for Windows](https://docs.nvidia.com/cuda/cuda-installation-guide-microsoft-windows)
+
+**cuDNN Installation:**
+- [cuDNN Backend Installation Guide](https://docs.nvidia.com/deeplearning/cudnn/installation/latest/backend.html)
 
 ## Python Example
 
