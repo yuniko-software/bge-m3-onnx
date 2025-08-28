@@ -1,6 +1,16 @@
 # BGE-M3 ONNX
 
-![Build](https://github.com/yuniko-software/bge-m3-onnx/actions/workflows/ci-build.yml/badge.svg)
+<p align="left">
+   <a href="https://github.com/yuniko-software/bge-m3-onnx">
+        <img alt="Build Status" src="https://github.com/yuniko-software/bge-m3-onnx/actions/workflows/ci-build.yml/badge.svg">
+    </a>
+    <a href="https://huggingface.co/collections/BAAI/bge-66797a74476eb1f085c7446d">
+        <img alt="HuggingFace Model" src="https://img.shields.io/badge/BGE_M3_ONNX-%F0%9F%A4%97-yellow">
+    </a>
+    <a href="https://github.com/yuniko-software">
+       <img alt="Build" src="https://img.shields.io/badge/Contribution-Welcome-blue">
+    </a>
+</p>
 
 This repository demonstrates how to convert the complete [BGE-M3](https://github.com/FlagOpen/FlagEmbedding) model to [ONNX](https://github.com/microsoft/onnxruntime) format and use it in multiple programming languages with **full multi-vector functionality**.
 
@@ -93,12 +103,10 @@ For C# and Java implementations, you need to install CUDA and cuDNN separately:
 ## Python Example
 
 ```python
-import onnxruntime as ort
-import numpy as np
-from onnxruntime_extensions import get_library_path
+from bge_m3_embedder import create_cpu_embedder, create_cuda_embedder
 
-# Initialize BGE-M3 ONNX embedder
-embedder = OnnxBGEM3Embedder("onnx/bge_m3_tokenizer.onnx", "onnx/bge_m3_model.onnx")
+# Create CPU-optimized embedder
+embedder = create_cpu_embedder("onnx/bge_m3_tokenizer.onnx", "onnx/bge_m3_model.onnx")
 
 # Generate all three embedding types
 result = embedder.encode("Hello world!")
@@ -107,7 +115,15 @@ print(f"Dense: {len(result['dense_vecs'])} dimensions")
 print(f"Sparse: {len(result['lexical_weights'])} tokens")  
 print(f"ColBERT: {len(result['colbert_vecs'])} vectors")
 
-# See full implementation in generate_reference_embeddings.py
+# Clean up resources
+embedder.close()
+
+# For CUDA acceleration
+cuda_embedder = create_cuda_embedder("onnx/bge_m3_tokenizer.onnx", "onnx/bge_m3_model.onnx", device_id=0)
+result = cuda_embedder.encode("Hello world!")
+cuda_embedder.close()
+
+# See full implementation in samples/python
 ```
 
 ## C# Example
@@ -115,8 +131,8 @@ print(f"ColBERT: {len(result['colbert_vecs'])} vectors")
 ```csharp
 using BgeM3.Onnx;
 
-// Initialize embedder
-using var embedder = new M3Embedder(tokenizerPath, modelPath);
+// Create CPU-optimized embedder
+using var embedder = M3EmbedderFactory.CreateCpuOptimized(tokenizerPath, modelPath);
 
 // Generate all embedding types
 var result = embedder.GenerateEmbeddings("Hello world!");
@@ -125,22 +141,32 @@ Console.WriteLine($"Dense: {result.DenseEmbedding.Length} dimensions");
 Console.WriteLine($"Sparse: {result.SparseWeights.Count} tokens");
 Console.WriteLine($"ColBERT: {result.ColBertVectors.Length} vectors");
 
+// For CUDA acceleration
+using var cudaEmbedder = M3EmbedderFactory.CreateCudaOptimized(tokenizerPath, modelPath, deviceId: 0);
+var cudaResult = cudaEmbedder.GenerateEmbeddings("Hello world!");
+
 // See full implementation in samples/dotnet
 ```
 
 ## Java Example
 
 ```java
-import com.yunikosoftware.bgem3onnx.M3Embedder;
+import com.yunikosoftware.bgem3onnx.*;
 
-// Initialize embedder
-try (M3Embedder embedder = new M3Embedder(tokenizerPath, modelPath)) {
+// Create CPU-optimized embedder
+try (M3Embedder embedder = M3EmbedderFactory.createCpuOptimized(tokenizerPath, modelPath)) {
     // Generate all embedding types
     M3EmbeddingOutput result = embedder.generateEmbeddings("Hello world!");
     
     System.out.println("Dense: " + result.getDenseEmbedding().length + " dimensions");
     System.out.println("Sparse: " + result.getSparseWeights().size() + " tokens");
     System.out.println("ColBERT: " + result.getColBertVectors().length + " vectors");
+}
+
+// For CUDA acceleration
+try (M3Embedder cudaEmbedder = M3EmbedderFactory.createCudaOptimized(tokenizerPath, modelPath, 0)) {
+    M3EmbeddingOutput result = cudaEmbedder.generateEmbeddings("Hello world!");
+    // Process CUDA results
 }
 
 // See full implementation in samples/java
