@@ -4,7 +4,7 @@
    <a href="https://github.com/yuniko-software/bge-m3-onnx">
         <img alt="Build Status" src="https://github.com/yuniko-software/bge-m3-onnx/actions/workflows/ci-build.yml/badge.svg">
     </a>
-    <a href="https://huggingface.co/collections/BAAI/bge-66797a74476eb1f085c7446d">
+    <a href="https://huggingface.co/yuniko-software/bge-m3-onnx">
         <img alt="HuggingFace Model" src="https://img.shields.io/badge/BGE_M3_ONNX-%F0%9F%A4%97-yellow">
     </a>
     <a href="https://github.com/yuniko-software">
