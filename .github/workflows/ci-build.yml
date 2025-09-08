@@ -28,7 +28,7 @@ jobs:
         pip install onnx onnxruntime onnxruntime-extensions numpy transformers
 
     - name: Set up .NET
-      uses: actions/setup-dotnet@v4
+      uses: actions/setup-dotnet@v5
       with:
         dotnet-version: '9.0.x'
 
