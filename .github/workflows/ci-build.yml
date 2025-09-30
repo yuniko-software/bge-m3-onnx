@@ -17,17 +17,19 @@ jobs:
     steps:
     - uses: actions/checkout@v5
 
+    - name: Free up disk space
+      run: |
+        sudo rm -rf /opt/ghc
+        sudo rm -rf "/usr/local/share/boost"
+        sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+        sudo apt-get clean
+        docker system prune -af
+        df -h
+
     - name: Set up Python
       uses: actions/setup-python@v6
       with:
         python-version: '3.11'
-
-    - name: Install Python dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip cache purge
-        pip install onnx onnxruntime onnxruntime-extensions numpy transformers
-        pip install torch --index-url https://download.pytorch.org/whl/cpu
 
     - name: Set up .NET
       uses: actions/setup-dotnet@v5
@@ -41,6 +43,13 @@ jobs:
         java-version: '17'
         cache: 'maven'
 
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip cache purge
+        pip install onnx onnxruntime onnxruntime-extensions numpy transformers
+        pip install torch --index-url https://download.pytorch.org/whl/cpu
+
     - name: Download model files from latest release
       run: |
         mkdir -p onnx
@@ -49,15 +58,6 @@ jobs:
         rm onnx.zip
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: Free up disk space
-      run: |
-        sudo rm -rf /opt/ghc
-        sudo rm -rf "/usr/local/share/boost"
-        sudo rm -rf "$AGENT_TOOLSDIRECTORY"
-        sudo apt-get clean
-        docker system prune -af
-        df -h
 
     - name: Make run_tests.sh executable
       run: chmod +x run_tests.sh
