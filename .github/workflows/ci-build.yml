@@ -52,10 +52,11 @@ jobs:
 
     - name: Free up disk space
       run: |
-        sudo rm -rf /usr/share/dotnet
         sudo rm -rf /opt/ghc
         sudo rm -rf "/usr/local/share/boost"
         sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+        sudo apt-get clean
+        docker system prune -af
         df -h
 
     - name: Make run_tests.sh executable
