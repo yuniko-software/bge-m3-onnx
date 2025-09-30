@@ -57,6 +57,7 @@ echo -e "${GREEN}Python performance tests completed successfully!${NC}"
 echo -e "${YELLOW}Running .NET performance benchmarks...${NC}"
 
 pushd samples/dotnet/BgeM3.Onnx.Performance > /dev/null
+dotnet clean
 dotnet run --configuration Release
 if [ $? -ne 0 ]; then
     echo -e "${RED}ERROR: .NET performance tests failed!${NC}"

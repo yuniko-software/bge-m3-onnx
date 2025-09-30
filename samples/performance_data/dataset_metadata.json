@@ -2,27 +2,27 @@
   "total_texts": 1000,
   "statistics": {
     "length_distribution": {
-      "short": 954,
       "long": 4,
+      "short": 954,
       "medium": 42
     },
     "language_distribution": {
-      "russian": 18,
-      "spanish": 26,
       "english": 914,
       "chinese": 24,
+      "spanish": 26,
+      "russian": 18,
       "arabic": 18
     },
     "domain_distribution": {
-      "education": 54,
       "technology": 366,
       "healthcare": 15,
+      "business": 84,
       "general": 481,
-      "business": 84
+      "education": 54
     },
     "source_distribution": {
-      "synthetic": 824,
       "technical": 28,
+      "synthetic": 824,
       "predefined": 148
     },
     "word_count_stats": {

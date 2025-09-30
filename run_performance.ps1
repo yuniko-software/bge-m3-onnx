@@ -78,6 +78,7 @@ Write-Yellow "Running .NET performance benchmarks..."
 
 Push-Location "samples\dotnet\BgeM3.Onnx.Performance"
 try {
+    dotnet clean
     dotnet run --configuration Release
     if ($LASTEXITCODE -ne 0) {
         Write-Red "ERROR: .NET performance tests failed!"

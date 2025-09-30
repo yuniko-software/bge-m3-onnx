@@ -117,6 +117,7 @@ Write-Yellow "Running .NET tests..."
 
 Push-Location "samples\dotnet\BgeM3.Onnx.Tests"
 try {
+    dotnet clean
     dotnet test --verbosity normal
     if ($LASTEXITCODE -ne 0) {
         Write-Red "ERROR: .NET tests failed!"
@@ -147,7 +148,7 @@ try {
 
 Push-Location "samples\java\bge-m3-onnx"
 try {
-    mvn test
+    mvn clean test
     if ($LASTEXITCODE -ne 0) {
         Write-Red "ERROR: Java tests failed!"
         exit 1

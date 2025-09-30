@@ -87,6 +87,7 @@ echo -e "${GREEN}Python tests passed successfully!${NC}"
 echo -e "${YELLOW}Running .NET tests...${NC}"
 
 pushd samples/dotnet/BgeM3.Onnx.Tests > /dev/null
+dotnet clean
 dotnet test --verbosity normal
 
 if [ $? -ne 0 ]; then
@@ -109,7 +110,7 @@ if ! command -v mvn &> /dev/null; then
 fi
 
 pushd samples/java/bge-m3-onnx > /dev/null
-mvn test
+mvn clean test
 
 if [ $? -ne 0 ]; then
     echo -e "${RED}ERROR: Java tests failed!${NC}"
