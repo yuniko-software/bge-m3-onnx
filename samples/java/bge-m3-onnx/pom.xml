@@ -37,7 +37,7 @@
     <dependency>
       <groupId>com.microsoft.onnxruntime</groupId>
       <artifactId>onnxruntime_gpu</artifactId>
-      <version>1.23.0</version>
+      <version>1.23.1</version>
     </dependency>
     <dependency>
       <groupId>com.microsoft.onnxruntime</groupId>
