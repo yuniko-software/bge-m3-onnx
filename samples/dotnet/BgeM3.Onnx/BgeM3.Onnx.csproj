@@ -9,7 +9,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.ML.OnnxRuntime.Extensions" Version="0.14.0" />
-    <PackageReference Include="Microsoft.ML.OnnxRuntime.Gpu" Version="1.23.1" />
+    <PackageReference Include="Microsoft.ML.OnnxRuntime.Gpu" Version="1.23.2" />
   </ItemGroup>
 
 </Project>
