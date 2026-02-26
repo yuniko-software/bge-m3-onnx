@@ -1,0 +1,7 @@
+onnx
+onnxruntime
+onnxruntime-extensions
+numpy
+pytest
+FlagEmbedding==1.3.5
+transformers==4.51.3

@@ -36,8 +36,15 @@ fi
 
 echo "Found Python: $(python3 --version)"
 
+echo -e "${YELLOW}Installing Python dependencies from requirements.txt...${NC}"
+pip install -r requirements.txt
+if [ $? -ne 0 ]; then
+    echo -e "${RED}ERROR: Failed to install Python dependencies from requirements.txt${NC}"
+    exit 1
+fi
+
 # Check if required packages are installed
-PACKAGES=("onnx" "onnxruntime" "onnxruntime-extensions" "numpy" "pytest" "transformers" "FlagEmbedding" "torch")
+PACKAGES=("onnx" "onnxruntime" "onnxruntime-extensions" "numpy" "pytest" "FlagEmbedding" "transformers" "torch")
 MISSING_PACKAGES=()
 
 for pkg in "${PACKAGES[@]}"; do

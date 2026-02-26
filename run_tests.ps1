@@ -46,8 +46,15 @@ try {
     exit 1
 }
 
+Write-Yellow "Installing Python dependencies from requirements.txt..."
+python -m pip install -r requirements.txt
+if ($LASTEXITCODE -ne 0) {
+    Write-Red "ERROR: Failed to install Python dependencies from requirements.txt"
+    exit 1
+}
+
 # Check if required packages are installed
-$packages = @("onnx", "onnxruntime", "onnxruntime_extensions", "numpy", "pytest", "transformers", "FlagEmbedding", "torch")
+$packages = @("onnx", "onnxruntime", "onnxruntime_extensions", "numpy", "pytest", "FlagEmbedding", "transformers", "torch")
 $missingPackages = @()
 
 foreach ($pkg in $packages) {
