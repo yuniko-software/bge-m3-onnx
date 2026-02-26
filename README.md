@@ -57,6 +57,11 @@ This repository demonstrates how to convert the complete [BGE-M3](https://github
 3. Generate reference embeddings (optional):
    - Run `python generate_reference_embeddings.py` to create reference embeddings for testing
 
+   Python dependencies are managed in `requirements.txt`:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
 4. Run the samples:
    - Once you have the ONNX models in the `/onnx` folder, you can run any sample
    - Try the .NET sample in `/samples/dotnet` or the Java sample in `/samples/java`
